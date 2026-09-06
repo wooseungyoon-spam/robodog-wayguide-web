@@ -1,0 +1,17 @@
+# Python Virtualenv & Cache
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment & Secrets
+.env
+users.json
+
+# Logs & OS artifacts
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
