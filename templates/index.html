@@ -36,6 +36,13 @@
         </div>
         
         <div class="header-right-group">
+            <!-- [신규] 실제 로봇개 블루투스 (BLE) 연동 버튼 -->
+            <button id="btnHeaderBle" class="btn-ble-header" title="실제 로봇개 블루투스(BLE) 무선 연결 및 관제">
+                <span id="bleHeaderIcon" class="ble-icon">📡</span>
+                <span id="bleHeaderText" class="ble-text">로봇개 연결</span>
+                <span id="bleHeaderBadge" class="ble-badge badge-off">연결안됨</span>
+            </button>
+
             <!-- [신규] AI 얼굴인식 (Face ID) 카메라 버튼 -->
             <button id="btnHeaderFaceId" class="btn-faceid-header" title="AI 얼굴인식 (Face ID) 카메라 열기">
                 <span class="faceid-icon">📷</span>
@@ -48,8 +55,13 @@
                 <span id="narratorText">음성 ON</span>
             </button>
 
-            <!-- 사용자 로그인 & 프로필 위젯 -->
+            <!-- 사용자 나이 설정 & 로그인/프로필 위젯 -->
             <div id="headerAuthArea" class="header-auth-area">
+                <!-- 만 나이 표시 및 빠른 변경 칩 -->
+                <button id="btnHeaderAgeQuick" class="btn-age-chip" title="만 나이 설정 (만 60세 미만: 노인모드 비활성화 / 만 60세 이상: 노인모드 활성화)">
+                    <span class="age-icon">🎂</span>
+                    <span id="headerAgeText">만 28세</span>
+                </button>
                 <button id="btnOpenAuthModal" class="btn-auth-header">
                     <span class="auth-icon">👤</span>
                     <span id="headerAuthText">guest님 (로그인)</span>
@@ -58,8 +70,8 @@
             </div>
 
             <!-- 원클릭 모드 토글 스위처 (노인 모드 / 일반 통합 모드) -->
-            <div class="mode-switcher-container">
-                <button id="btnSeniorMode" class="btn-mode active" title="노인 안심 모드">
+            <div class="mode-switcher-container" id="modeSwitcherContainer">
+                <button id="btnSeniorMode" class="btn-mode active" title="노인 안심 모드 (만 60세 이상 전용)">
                     👵 노인 모드
                 </button>
                 <button id="btnGeneralMode" class="btn-mode" title="일반 사용자 및 통합 관제 모드">
@@ -87,6 +99,10 @@
                     <button id="btnTriggerFaceId" class="btn-greeting-faceid">
                         <span class="btn-icon">📷</span>
                         <span>얼굴인식 (Face ID) 스캔</span>
+                    </button>
+                    <button id="btnSeniorConnectBle" class="btn-greeting-ble" title="실제 로봇개 블루투스 무선 연결">
+                        <span class="btn-icon">📡</span>
+                        <span id="seniorBleBtnText">로봇개 연결 (BLE)</span>
                     </button>
                 </div>
             </div>
@@ -635,8 +651,13 @@
                         <input type="text" id="inputRegName" placeholder="성함을 입력하세요">
                     </div>
                     <div class="auth-form-group flex-1">
+                        <label for="inputRegAge">만 나이 <span class="required">*</span></label>
+                        <input type="number" id="inputRegAge" placeholder="예: 68" min="1" max="130" value="68">
+                        <small class="form-hint">만 60세 이상: 노인 안심 모드 활성화</small>
+                    </div>
+                    <div class="auth-form-group flex-1">
                         <label for="inputRegUsername">아이디 (선택)</label>
-                        <input type="text" id="inputRegUsername" placeholder="아이디를 입력하세요 (미입력 시 자동생성)">
+                        <input type="text" id="inputRegUsername" placeholder="미입력 시 자동생성">
                     </div>
                 </div>
 
@@ -928,6 +949,210 @@
             <div class="voice-fallback-input-row">
                 <input type="text" id="inputVoiceFallback" placeholder="마이크 대신 직접 목적지 입력..." autocomplete="off">
                 <button id="btnSubmitVoiceFallback" class="btn-voice-fallback-send">입력</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         [신규] 만 나이 설정 및 노인 모드 활성화 제어 모달
+         ========================================================= -->
+    <div id="ageModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card age-modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">🎂</span>
+                    <h2>사용자 만 나이 설정</h2>
+                </div>
+                <button id="btnCloseAgeModal" class="btn-close">&times;</button>
+            </div>
+            <div class="age-modal-body">
+                <div class="age-rule-notice">
+                    <div class="rule-icon">💡</div>
+                    <div class="rule-text">
+                        <strong>모드 이용 안내:</strong><br>
+                        • <strong>만 60세 미만:</strong> 일반 모드만 이용 가능 (노인 안심 모드 비활성화)<br>
+                        • <strong>만 60세 이상:</strong> 노인 안심 모드 &amp; 일반 모드 모두 자유롭게 이용 가능
+                    </div>
+                </div>
+
+                <div class="current-age-badge-row">
+                    <span class="badge-label">현재 설정된 나이:</span>
+                    <span id="currentAgeDisplayBadge" class="age-badge-highlight">만 28세 (일반모드 전용)</span>
+                </div>
+
+                <!-- 1초 빠른 프리셋 선택 버튼 -->
+                <div class="age-presets-group">
+                    <div class="presets-title">⚡ 빠른 나이 선택 (체험 및 모드 테스트용):</div>
+                    <div class="presets-grid">
+                        <button class="btn-age-preset" data-age="24">
+                            <span class="preset-icon">👧</span>
+                            <span class="preset-age">만 24세</span>
+                            <span class="preset-tag under">일반 모드 전용</span>
+                        </button>
+                        <button class="btn-age-preset" data-age="45">
+                            <span class="preset-icon">🧑</span>
+                            <span class="preset-age">만 45세</span>
+                            <span class="preset-tag under">일반 모드 전용</span>
+                        </button>
+                        <button class="btn-age-preset" data-age="68">
+                            <span class="preset-icon">👵</span>
+                            <span class="preset-age">만 68세</span>
+                            <span class="preset-tag over">노인+일반 모드 활성</span>
+                        </button>
+                        <button class="btn-age-preset" data-age="75">
+                            <span class="preset-icon">👴</span>
+                            <span class="preset-age">만 75세</span>
+                            <span class="preset-tag over">노인+일반 모드 활성</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 직접 숫자 입력 -->
+                <div class="age-custom-input-row">
+                    <label for="inputCustomAge">직접 만 나이 입력:</label>
+                    <div class="custom-input-wrap">
+                        <input type="number" id="inputCustomAge" min="1" max="130" placeholder="예: 65">
+                        <span class="unit-text">세</span>
+                        <button id="btnApplyCustomAge" class="btn-apply-age">설정 적용</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         [신규] 실제 로봇개 블루투스 (BLE GATT) 연동 및 조종 관제 모달
+         ========================================================= -->
+    <div id="bluetoothModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card ble-modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">🤖</span>
+                    <div>
+                        <h2>실제 로봇개 블루투스(BLE) 연동 관제</h2>
+                        <span class="modal-subtitle">Web Bluetooth API 무선 GATT 페어링 &amp; 텔레메트리</span>
+                    </div>
+                </div>
+                <button id="btnCloseBleModal" class="btn-close">&times;</button>
+            </div>
+
+            <div class="ble-modal-body">
+                <!-- 상단 기기 연결 상태 HUD -->
+                <div class="ble-status-hud">
+                    <div class="hud-item hud-state">
+                        <span class="hud-label">연결 상태</span>
+                        <div class="hud-value-row">
+                            <span id="bleStatusDot" class="status-dot dot-disconnected"></span>
+                            <span id="bleStatusText" class="hud-value">연결 대기 중</span>
+                        </div>
+                    </div>
+                    <div class="hud-item hud-device">
+                        <span class="hud-label">기기명 (Device)</span>
+                        <span id="bleDeviceNameText" class="hud-value">미연결</span>
+                    </div>
+                    <div class="hud-item hud-battery">
+                        <span class="hud-label">배터리 잔량</span>
+                        <div class="battery-bar-wrap">
+                            <div id="bleBatteryFill" class="battery-fill" style="width: 90%;"></div>
+                            <span id="bleBatteryText" class="battery-percent">90%</span>
+                        </div>
+                    </div>
+                    <div class="hud-item hud-rssi">
+                        <span class="hud-label">신호 세기 (RSSI)</span>
+                        <span id="bleRssiText" class="hud-value">-62 dBm (우수)</span>
+                    </div>
+                </div>
+
+                <!-- 연결 액션 바 (실제 기기 검색, 가상 시뮬레이션 연결, 연결 해제) -->
+                <div class="ble-actions-bar">
+                    <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary">
+                        <span class="btn-icon">🔍</span>
+                        <span>주변 실제 로봇개 검색 &amp; 페어링 (BLE)</span>
+                    </button>
+                    <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" title="주변에 실물 로봇개가 없을 때 안전하게 모든 기능을 테스트합니다">
+                        <span class="btn-icon">🤖</span>
+                        <span>가상 로봇개 시뮬레이션 연결</span>
+                    </button>
+                    <button id="btnBleDisconnect" class="btn-ble-action btn-disconnect" style="display: none;">
+                        <span class="btn-icon">🔌</span>
+                        <span>연결 해제</span>
+                    </button>
+                </div>
+
+                <!-- 자율 보행 내비게이션 추종 모드 스위치 -->
+                <div class="ble-auto-follow-card">
+                    <div class="auto-follow-left">
+                        <span class="af-icon">🐕‍🦺</span>
+                        <div class="af-texts">
+                            <span class="af-title">자율 보행 내비게이션 자동 추종 모드</span>
+                            <span class="af-desc">길안내 중 횡단보도 정지/출발 및 코너 회전 신호를 로봇개에 실시간 전송합니다</span>
+                        </div>
+                    </div>
+                    <label class="switch-wrap">
+                        <input type="checkbox" id="chkBleAutoFollow" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- 로봇개 수동 조종 패드 (D-PAD & 특수 동작) -->
+                <div class="ble-controls-container">
+                    <div class="dpad-box">
+                        <div class="dpad-title">🎮 로봇개 직접 방향 조종 (D-Pad)</div>
+                        <div class="dpad-grid">
+                            <div></div>
+                            <button id="btnDpadForward" class="dpad-btn dpad-up" data-cmd="CMD:FORWARD" title="전진 (전방 보행)">⬆️ 전진</button>
+                            <div></div>
+
+                            <button id="btnDpadLeft" class="dpad-btn dpad-left" data-cmd="CMD:TURN_LEFT" title="좌회전">⬅️ 좌회전</button>
+                            <button id="btnDpadStop" class="dpad-btn dpad-center" data-cmd="CMD:STOP" title="정지">🛑 정지</button>
+                            <button id="btnDpadRight" class="dpad-btn dpad-right" data-cmd="CMD:TURN_RIGHT" title="우회전">➡️ 우회전</button>
+
+                            <div></div>
+                            <button id="btnDpadBackward" class="dpad-btn dpad-down" data-cmd="CMD:BACKWARD" title="후진">⬇️ 후진</button>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <div class="actions-box">
+                        <div class="actions-title">🐾 로봇개 특수 동작 &amp; 상태 제어</div>
+                        <div class="actions-grid">
+                            <button class="btn-robot-motion" data-cmd="CMD:STAND">
+                                <span>🐕 기립 (일어서기)</span>
+                            </button>
+                            <button class="btn-robot-motion" data-cmd="CMD:SIT">
+                                <span>🧎 엎드리기 (앉기)</span>
+                            </button>
+                            <button class="btn-robot-motion" data-cmd="CMD:PAW">
+                                <span>🐾 손인사 (앞발 들기)</span>
+                            </button>
+                            <button class="btn-robot-motion" data-cmd="CMD:GUARD">
+                                <span>🛡️ 밀착 호위 모드</span>
+                            </button>
+                        </div>
+
+                        <!-- 보행 속도 기어 선택 -->
+                        <div class="speed-gear-wrap">
+                            <span class="speed-label">보행 속도 기어:</span>
+                            <div class="speed-btns">
+                                <button class="btn-speed-gear" data-speed="1">1단 (0.8km/h 완만)</button>
+                                <button class="btn-speed-gear active" data-speed="2">2단 (1.5km/h 보통)</button>
+                                <button class="btn-speed-gear" data-speed="3">3단 (2.5km/h 쾌속)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 실시간 BLE UART 송수신 패킷 모니터 터미널 -->
+                <div class="ble-packet-terminal">
+                    <div class="terminal-header">
+                        <span>📟 실시간 BLE 패킷 콘솔 (GATT NUS UART)</span>
+                        <button id="btnClearBleLog" class="btn-clear-log">기록 지우기</button>
+                    </div>
+                    <div id="bleTerminalOutput" class="terminal-content">
+                        <div class="term-line info">[SYS] Web Bluetooth Subsystem Ready.</div>
+                        <div class="term-line info">[SYS] GATT Services: Nordic UART (NUS), HM-10, Battery Service 대기 중</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

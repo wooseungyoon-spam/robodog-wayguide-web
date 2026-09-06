@@ -2819,4 +2819,555 @@ body.mode-guardian .btn-mode.active {
     background: #7C3AED;
 }
 
+/* =========================================================
+   [신규] BLE 로봇개 헤더 버튼 & 상태 배지
+   ========================================================= */
+.btn-ble-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 9999px;
+    padding: 6px 13px;
+    color: #F8FAFC;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+.btn-ble-header:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: #38BDF8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+}
+.ble-icon {
+    font-size: 15px;
+    animation: ble-pulse 2s infinite ease-in-out;
+}
+@keyframes ble-pulse {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.15); }
+}
+.ble-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    letter-spacing: 0.4px;
+}
+.ble-badge.badge-off {
+    background: rgba(239, 68, 68, 0.2);
+    color: #FCA5A5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.ble-badge.badge-connecting {
+    background: rgba(234, 179, 8, 0.2);
+    color: #FDE047;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    animation: badge-blink 1s infinite alternate;
+}
+.ble-badge.badge-on {
+    background: rgba(34, 197, 94, 0.25);
+    color: #86EFAC;
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+/* =========================================================
+   [신규] 헤더 만 나이 설정 칩
+   ========================================================= */
+.btn-age-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 9999px;
+    padding: 6px 12px;
+    color: #FDE68A;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-age-chip:hover {
+    background: rgba(245, 158, 11, 0.3);
+    border-color: #F59E0B;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* 어르신 모드 상단 BLE 연결 버튼 */
+.btn-greeting-ble {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(99, 102, 241, 0.2));
+    border: 1.5px solid rgba(56, 189, 248, 0.4);
+    border-radius: 12px;
+    padding: 9px 15px;
+    color: #38BDF8;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-greeting-ble:hover {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(99, 102, 241, 0.35));
+    border-color: #38BDF8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(14, 165, 233, 0.3);
+}
+
+/* =========================================================
+   [신규] 나이 설정 모달 스타일 (#ageModal)
+   ========================================================= */
+.age-modal-card {
+    max-width: 480px;
+    width: 92%;
+    background: #0F172A;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 20px;
+    padding: 24px;
+    color: #F8FAFC;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 35px rgba(245, 158, 11, 0.15);
+}
+.age-rule-notice {
+    display: flex;
+    gap: 12px;
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 4px solid #F59E0B;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #FEF3C7;
+}
+.current-age-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+}
+.age-badge-highlight {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: #000;
+    font-weight: 900;
+    font-size: 14px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+}
+.presets-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #94A3B8;
+    margin-bottom: 10px;
+}
+.presets-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+}
+.btn-age-preset {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 14px;
+    padding: 12px;
+    color: #F8FAFC;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-age-preset:hover {
+    background: rgba(51, 65, 85, 0.9);
+    border-color: #38BDF8;
+    transform: translateY(-2px);
+}
+.preset-icon { font-size: 24px; }
+.preset-age { font-size: 15px; font-weight: 800; }
+.preset-tag {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.preset-tag.under {
+    background: rgba(148, 163, 184, 0.2);
+    color: #CBD5E1;
+}
+.preset-tag.over {
+    background: rgba(34, 197, 94, 0.2);
+    color: #86EFAC;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+.age-custom-input-row {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 14px;
+    padding: 14px;
+}
+.age-custom-input-row label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #CBD5E1;
+    margin-bottom: 8px;
+}
+.custom-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.custom-input-wrap input {
+    flex: 1;
+    background: #020617;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #F8FAFC;
+    font-size: 16px;
+    font-weight: 800;
+    outline: none;
+}
+.custom-input-wrap input:focus {
+    border-color: #F59E0B;
+}
+.unit-text {
+    font-size: 15px;
+    font-weight: 800;
+    color: #94A3B8;
+}
+.btn-apply-age {
+    background: #F59E0B;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-apply-age:hover {
+    background: #D97706;
+}
+
+/* =========================================================
+   [신규] BLE 로봇개 관제 모달 스타일 (#bluetoothModal)
+   ========================================================= */
+.ble-modal-card {
+    max-width: 640px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #0A0F1D;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 22px;
+    padding: 24px;
+    color: #F8FAFC;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 45px rgba(56, 189, 248, 0.15);
+}
+.ble-status-hud {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 18px;
+}
+.hud-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.hud-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94A3B8;
+    text-transform: uppercase;
+}
+.hud-value-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.hud-value {
+    font-size: 13px;
+    font-weight: 800;
+    color: #F8FAFC;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.status-dot.dot-disconnected { background: #EF4444; box-shadow: 0 0 6px #EF4444; }
+.status-dot.dot-connecting { background: #EAB308; box-shadow: 0 0 6px #EAB308; animation: badge-blink 0.8s infinite; }
+.status-dot.dot-connected { background: #22C55E; box-shadow: 0 0 8px #22C55E; }
+
+.battery-bar-wrap {
+    position: relative;
+    width: 100%;
+    height: 14px;
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.battery-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10B981, #34D399);
+    transition: width 0.3s ease;
+}
+.battery-percent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 9px;
+    font-weight: 900;
+    color: #FFF;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.ble-actions-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.btn-ble-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+.btn-pair-primary {
+    flex: 2;
+    background: linear-gradient(135deg, #0284C7, #0369A1);
+    color: #FFF;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+.btn-pair-primary:hover {
+    background: linear-gradient(135deg, #0369A1, #075985);
+    transform: translateY(-1px);
+}
+.btn-pair-virtual {
+    flex: 1.5;
+    background: rgba(30, 41, 59, 0.9);
+    color: #38BDF8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+}
+.btn-pair-virtual:hover {
+    background: rgba(56, 189, 248, 0.15);
+}
+.btn-disconnect {
+    background: rgba(239, 68, 68, 0.2);
+    color: #F87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.btn-disconnect:hover {
+    background: rgba(239, 68, 68, 0.35);
+}
+
+.ble-auto-follow-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+}
+.auto-follow-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.af-icon { font-size: 24px; }
+.af-texts { display: flex; flex-direction: column; gap: 2px; }
+.af-title { font-size: 13px; font-weight: 800; color: #F8FAFC; }
+.af-desc { font-size: 11px; color: #94A3B8; }
+
+/* D-Pad 조종 패드 & 액션 */
+.ble-controls-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.dpad-box, .actions-box {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 16px;
+    padding: 14px;
+}
+.dpad-title, .actions-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #94A3B8;
+    margin-bottom: 12px;
+}
+.dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-width: 220px;
+    margin: 0 auto;
+}
+.dpad-btn {
+    background: #1E293B;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 10px;
+    color: #F8FAFC;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 12px 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.dpad-btn:active {
+    background: #0284C7;
+    transform: scale(0.92);
+}
+.dpad-btn.dpad-center {
+    background: #DC2626;
+    border-color: #EF4444;
+    color: #FFF;
+}
+.dpad-btn.dpad-center:active {
+    background: #B91C1C;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.btn-robot-motion {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    color: #E2E8F0;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-robot-motion:hover {
+    background: rgba(51, 65, 85, 0.9);
+    border-color: #38BDF8;
+}
+.btn-robot-motion:active {
+    transform: scale(0.95);
+}
+
+.speed-gear-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    padding-top: 10px;
+}
+.speed-label {
+    font-size: 11px;
+    color: #94A3B8;
+    font-weight: 700;
+}
+.speed-btns {
+    display: flex;
+    gap: 6px;
+}
+.btn-speed-gear {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    color: #94A3B8;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 6px 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-speed-gear.active {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38BDF8;
+    color: #38BDF8;
+    font-weight: 800;
+}
+
+/* 실시간 패킷 터미널 */
+.ble-packet-terminal {
+    background: #020617;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(15, 23, 42, 0.9);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #94A3B8;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+}
+.btn-clear-log {
+    background: transparent;
+    border: none;
+    color: #64748B;
+    font-size: 10px;
+    cursor: pointer;
+}
+.btn-clear-log:hover { color: #CBD5E1; }
+.terminal-content {
+    height: 120px;
+    overflow-y: auto;
+    padding: 10px 12px;
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.term-line.info { color: #38BDF8; }
+.term-line.tx { color: #4ADE80; }
+.term-line.rx { color: #FACC15; }
+.term-line.err { color: #F87171; }
+
+@media (max-width: 640px) {
+    .ble-status-hud { grid-template-columns: repeat(2, 1fr); }
+    .ble-controls-container { grid-template-columns: 1fr; }
+    .btn-ble-header .ble-text { display: none; }
+}
+
+
 

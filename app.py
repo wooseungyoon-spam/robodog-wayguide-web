@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import logging
 import math
 import json
@@ -78,6 +79,7 @@ def load_users():
                 "username": "soonja",
                 "password": "123",
                 "name": "김순자",
+                "age": 73,
                 "address": "경기도 용인시 수지구 성복2로 220",
                 "detail_address": "성복자이 102동",
                 "lat": 37.31520,
@@ -91,7 +93,12 @@ def load_users():
         return default_users
     try:
         with open(USERS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            # 나이 기본값 보정
+            for u in data:
+                if 'age' not in u:
+                    u['age'] = 73 if '순자' in u.get('name', '') else (28 if '우승윤' in u.get('name', '') else 68)
+            return data
     except Exception as e:
         logger.error(f"[AUTH] 사용자 데이터 로드 실패: {e}")
         return []
@@ -111,6 +118,14 @@ def register_user():
     name = data.get('name', '').strip()
     username = data.get('username', '').strip() or f"user_{int(math.floor(math.sin(1)*100000))}"
     password = data.get('password', '1234')
+    
+    # 나이 설정 (만 나이 기본값: 68세, 만 60세 미만/이상 판별용)
+    raw_age = data.get('age', 68)
+    try:
+        age = int(raw_age)
+    except (ValueError, TypeError):
+        age = 68
+
     address = data.get('address', '').strip()
     detail_address = data.get('detail_address', '').strip()
     guardian_name = data.get('guardian_name', '').strip()
@@ -120,7 +135,7 @@ def register_user():
     lng = data.get('lng')
 
     if not name or not address:
-        return jsonify({"status": "error", "message": "어르신 성함과 거주지 주소는 필수 입력 항목입니다."}), 400
+        return jsonify({"status": "error", "message": "성함과 거주지 주소는 필수 입력 항목입니다."}), 400
 
     # 좌표가 없으면 주소 기반 즉시 지오코딩 시도
     if lat is None or lng is None:
@@ -151,6 +166,7 @@ def register_user():
         "username": username,
         "password": password,
         "name": name,
+        "age": age,
         "address": address,
         "detail_address": detail_address,
         "lat": lat,
@@ -161,7 +177,7 @@ def register_user():
     }
     users.append(new_user)
     save_users(users)
-    logger.info(f"[AUTH] 신규 어르신 등록 완료: {name} ({address})")
+    logger.info(f"[AUTH] 신규 사용자 등록 완료: {name} (만 {age}세, {address})")
 
     user_info = dict(new_user)
     user_info.pop("password", None)
@@ -202,15 +218,93 @@ def update_user_profile():
         return jsonify({"status": "error", "message": "사용자를 찾을 수 없습니다."}), 404
 
     curr = users[target_idx]
-    for key in ['name', 'address', 'detail_address', 'guardian_name', 'guardian_phone', 'note', 'lat', 'lng']:
+    for key in ['name', 'age', 'address', 'detail_address', 'guardian_name', 'guardian_phone', 'note', 'lat', 'lng']:
         if key in data and data[key] is not None:
-            curr[key] = data[key]
+            if key == 'age':
+                try:
+                    curr[key] = int(data[key])
+                except (ValueError, TypeError):
+                    pass
+            else:
+                curr[key] = data[key]
 
     save_users(users)
-    logger.info(f"[AUTH] 회원 정보 업데이트 완료: {curr['name']} ({curr['address']})")
+    logger.info(f"[AUTH] 회원 정보 업데이트 완료: {curr['name']} (만 {curr.get('age', 68)}세, {curr['address']})")
     res_user = dict(curr)
     res_user.pop("password", None)
     return jsonify({"status": "success", "user": res_user}), 200
+
+@app.route('/api/auth/set_age', methods=['POST'])
+def set_active_age():
+    """만 나이 설정 API (만 60세 미만/이상 모드 분기 제어)"""
+    data = request.get_json() or {}
+    raw_age = data.get('age')
+    if raw_age is None:
+        return jsonify({"status": "error", "message": "나이를 입력해 주세요."}), 400
+    try:
+        age = int(raw_age)
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "유효한 나이 숫자를 입력해 주세요."}), 400
+
+    username = data.get('username')
+    user_id = data.get('id')
+
+    # 특정 로그인 사용자가 있다면 DB에도 저장
+    if username or user_id:
+        users = load_users()
+        for u in users:
+            if (user_id and u.get("id") == user_id) or (username and u.get("username") == username):
+                u['age'] = age
+                save_users(users)
+                break
+
+    is_senior_eligible = age >= 60
+    logger.info(f"[AUTH] 나이 설정 완료: 만 {age}세 (노인모드 가능여부: {is_senior_eligible})")
+    return jsonify({
+        "status": "success",
+        "age": age,
+        "is_senior_eligible": is_senior_eligible,
+        "message": f"만 {age}세로 설정되었습니다." + (" (노인 모드 활성화 가능)" if is_senior_eligible else " (만 60세 미만: 일반 모드 전용)")
+    }), 200
+
+# -------------------------------------------------------------
+# 2-0-1. 실제 로보독 블루투스 (BLE) 텔레메트리 & 원격 제어 브리지 API
+# -------------------------------------------------------------
+ROBODOG_BLE_STATE = {
+    "connected": False,
+    "device_name": "RoboDog-Companion",
+    "battery": 94,
+    "signal_rssi": -62,
+    "protocol": "Nordic UART (NUS)",
+    "last_cmd": "CMD:STAND",
+    "mode": "IDLE",
+    "firmware": "v2.6.4-GATT"
+}
+
+@app.route('/api/robodog/ble/status', methods=['GET', 'POST'])
+def robodog_ble_status():
+    """로봇개 블루투스 실시간 상태 및 텔레메트리 연동"""
+    global ROBODOG_BLE_STATE
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        ROBODOG_BLE_STATE.update(data)
+        return jsonify({"status": "success", "ble_state": ROBODOG_BLE_STATE}), 200
+    return jsonify({"status": "success", "ble_state": ROBODOG_BLE_STATE}), 200
+
+@app.route('/api/robodog/ble/command', methods=['POST'])
+def robodog_ble_command():
+    """로봇개 원격 조종 패킷 중계 API"""
+    global ROBODOG_BLE_STATE
+    data = request.get_json() or {}
+    cmd = data.get('command', 'CMD:STOP').strip()
+    ROBODOG_BLE_STATE['last_cmd'] = cmd
+    logger.info(f"[BLE-SERVER] 로봇개 제어 명령 중계: {cmd}")
+    return jsonify({
+        "status": "success",
+        "command": cmd,
+        "timestamp": time.time(),
+        "echo": f"ACK:{cmd}"
+    }), 200
 
 @app.route('/api/auth/profiles', methods=['GET'])
 def get_user_profiles():

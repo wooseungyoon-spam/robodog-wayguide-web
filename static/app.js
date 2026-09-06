@@ -10,7 +10,9 @@
 // 1. 글로벌 상태 및 통합 로거 유틸리티
 // ---------------------------------------------------------
 const AppState = {
-    currentMode: 'senior', // 'senior' | 'general' | 'guardian'
+    currentMode: 'general', // 'senior' | 'general' | 'guardian' (나이에 따라 초기화됨)
+    userAge: 28,            // 사용자 만 나이 (만 60세 미만: 일반모드 전용 / 만 60세 이상: 노인+일반모드)
+    isSeniorEligible: false,
     walkMode: 'follow',    // 'follow' | 'side' | 'lead'
     isBleConnected: false,
     isMockBle: false,
@@ -18,6 +20,9 @@ const AppState = {
     bleServer: null,
     bleTxChar: null,
     bleRxChar: null,
+    bleAutoFollow: true,
+    bleBattery: 94,
+    bleRssi: -62,
     isWalking: false,
     currentDest: null,
     battery: 98,
@@ -90,36 +95,138 @@ const BLE_UUIDS = {
 };
 
 const BleController = {
+    modalEl: null,
+    terminalEl: null,
+
+    init() {
+        this.modalEl = document.getElementById('bluetoothModal');
+        this.terminalEl = document.getElementById('bleTerminalOutput');
+
+        // 헤더 및 어르신 화면의 BLE 버튼
+        const btnHeader = document.getElementById('btnHeaderBle');
+        const btnSenior = document.getElementById('btnSeniorConnectBle');
+        const btnClose = document.getElementById('btnCloseBleModal');
+
+        if (btnHeader) btnHeader.addEventListener('click', () => this.openModal());
+        if (btnSenior) btnSenior.addEventListener('click', () => this.openModal());
+        if (btnClose) btnClose.addEventListener('click', () => this.closeModal());
+
+        // 모달 내 페어링 및 해제 버튼
+        const btnPairReal = document.getElementById('btnBlePairReal');
+        const btnPairVirt = document.getElementById('btnBlePairVirtual');
+        const btnDisconn = document.getElementById('btnBleDisconnect');
+        const btnClearLog = document.getElementById('btnClearBleLog');
+
+        if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect());
+        if (btnPairVirt) btnPairVirt.addEventListener('click', () => this.enableMockMode());
+        if (btnDisconn) btnDisconn.addEventListener('click', () => this.disconnect());
+        if (btnClearLog && this.terminalEl) {
+            btnClearLog.addEventListener('click', () => {
+                this.terminalEl.innerHTML = '<div class="term-line info">[SYS] 콘솔 기록 초기화됨.</div>';
+            });
+        }
+
+        // D-Pad 직접 조종 버튼들 바인딩
+        const dpadBtns = [
+            { id: 'btnDpadForward', cmd: 'CMD:FORWARD' },
+            { id: 'btnDpadBackward', cmd: 'CMD:BACKWARD' },
+            { id: 'btnDpadLeft', cmd: 'CMD:TURN_LEFT' },
+            { id: 'btnDpadRight', cmd: 'CMD:TURN_RIGHT' },
+            { id: 'btnDpadStop', cmd: 'CMD:STOP' }
+        ];
+        dpadBtns.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (el) {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.sendPacket(item.cmd);
+                });
+            }
+        });
+
+        // 특수 동작 버튼 바인딩
+        document.querySelectorAll('.btn-robot-motion').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cmd = btn.getAttribute('data-cmd');
+                if (cmd) this.sendPacket(cmd);
+            });
+        });
+
+        // 속도 기어 버튼 바인딩
+        document.querySelectorAll('.btn-speed-gear').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-speed-gear').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const gear = btn.getAttribute('data-speed') || '2';
+                const speedVal = gear === '1' ? 15 : (gear === '3' ? 35 : 25);
+                AppState.speed = speedVal;
+                this.sendPacket(`CMD:SPEED:${speedVal}`);
+            });
+        });
+
+        // 자동 추종 토글 바인딩
+        const chkAuto = document.getElementById('chkBleAutoFollow');
+        if (chkAuto) {
+            chkAuto.addEventListener('change', (e) => {
+                AppState.bleAutoFollow = e.target.checked;
+                this.logTerminal(`[SYS] 자율 보행 추종 모드: ${AppState.bleAutoFollow ? 'ON (활성화)' : 'OFF (수동 전용)'}`, 'info');
+            });
+        }
+    },
+
+    openModal() {
+        if (this.modalEl) {
+            this.modalEl.style.display = 'flex';
+        }
+    },
+
+    closeModal() {
+        if (this.modalEl) {
+            this.modalEl.style.display = 'none';
+        }
+    },
+
+    logTerminal(msg, type = 'info') {
+        if (!this.terminalEl) return;
+        const time = new Date().toTimeString().split(' ')[0];
+        const line = document.createElement('div');
+        line.className = `term-line ${type}`;
+        line.textContent = `[${time}] ${msg}`;
+        this.terminalEl.appendChild(line);
+        this.terminalEl.scrollTop = this.terminalEl.scrollHeight;
+    },
+
     /**
-     * 실제 로보독 블루투스 디바이스 검색 및 GATT 페어링
+     * 실제 로보독 블루투스 디바이스 검색 및 GATT 페어링 (Web Bluetooth API)
      */
     async connect() {
         if (!navigator.bluetooth) {
-            alert('⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\nChrome, Edge 브라우저(또는 HTTPS/localhost 환경)에서 실행해 주세요.\n\n시연을 위해 [가상 시뮬레이션 모드]로 안전하게 동작합니다.');
-            logEvent('[BLE]', '브라우저 Web Bluetooth 미지원 -> [가상 BLE 모드] 활성화', 'warn');
+            alert('⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\nChrome, Edge 브라우저(또는 HTTPS 보안 환경)에서 동작합니다.\n\n즉시 시연 및 테스트가 가능하도록 [가상 시뮬레이션 모드]로 연결합니다.');
+            this.logTerminal('브라우저 Web Bluetooth 미지원 -> 가상 모드 자동 진입', 'warn');
             this.enableMockMode();
             return;
         }
 
         try {
-            logEvent('[BLE]', '📡 주변 로보독 블루투스(BLE UART) 장치를 검색합니다...', 'info');
-            
-            // 모든 주변 BLE 기기 검색 지원 (ESP32, Arduino, Micro:bit, Nordic nRF52 등 광범위 지원)
+            this.updateUiConnecting();
+            this.logTerminal('📡 주변 로보독 블루투스(BLE UART GATT) 장치를 검색 중...', 'info');
+
+            // Unitree Go1/Go2, ESP32, Nordic nRF52, HM-10 등 광범위 BLE 지원
             const device = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: [
                     BLE_UUIDS.NUS_SERVICE,
                     BLE_UUIDS.HM10_SERVICE,
                     'generic_access',
-                    'battery_service'
+                    'battery_service',
+                    'device_information'
                 ]
             });
 
-            logEvent('[BLE]', `기기 선택됨: [${device.name || '알 수 없는 로봇'}] - GATT 서버 연결 중...`, 'info');
+            this.logTerminal(`디바이스 선택됨: [${device.name || 'RoboDog'}] - GATT 서버 연결 중...`, 'info');
 
-            // 연결 해제 리스너 등록
             device.addEventListener('gattserverdisconnected', () => {
-                logEvent('[BLE]', `로보독 [${device.name}]과의 연결이 끊어졌습니다.`, 'warn');
+                this.logTerminal(`로보독 [${device.name || 'RoboDog'}]과의 연결이 끊어졌습니다.`, 'err');
                 this.handleDisconnected();
             });
 
@@ -132,18 +239,27 @@ const BleController = {
                 const service = await server.getPrimaryService(BLE_UUIDS.NUS_SERVICE);
                 AppState.bleTxChar = await service.getCharacteristic(BLE_UUIDS.NUS_TX);
                 AppState.bleRxChar = await service.getCharacteristic(BLE_UUIDS.NUS_RX);
-                logEvent('[BLE]', 'Nordic UART Service (NUS) 특성 매핑 성공', 'success');
+                this.logTerminal('GATT Nordic UART Service (NUS) 채널 바인딩 성공', 'info');
             } catch (nusErr) {
                 // 2. HM-10 / AT-09 범용 시리얼 서비스 폴백
                 try {
                     const service = await server.getPrimaryService(BLE_UUIDS.HM10_SERVICE);
                     AppState.bleTxChar = await service.getCharacteristic(BLE_UUIDS.HM10_CHAR);
                     AppState.bleRxChar = AppState.bleTxChar;
-                    logEvent('[BLE]', 'HM-10 Serial Service 특성 매핑 성공', 'success');
+                    this.logTerminal('GATT HM-10 Serial 특성 매핑 성공', 'info');
                 } catch (hmErr) {
-                    logEvent('[BLE]', '표준 UART 서비스를 찾을 수 없어 기본 GATT 통신 모드로 연결됨', 'warn');
+                    this.logTerminal('표준 UART 미발견 -> 일반 GATT 텔레메트리 모드로 연결', 'warn');
                 }
             }
+
+            // 배터리 서비스 시도
+            try {
+                const batService = await server.getPrimaryService('battery_service');
+                const batChar = await batService.getCharacteristic('battery_level');
+                const batVal = await batChar.readValue();
+                AppState.bleBattery = batVal.getUint8(0);
+                this.updateTelemetry({ battery: AppState.bleBattery });
+            } catch (e) {}
 
             // RX 알림(Notify) 활성화
             if (AppState.bleRxChar && AppState.bleRxChar.properties.notify) {
@@ -157,15 +273,24 @@ const BleController = {
             AppState.isBleConnected = true;
             AppState.isMockBle = false;
 
-            this.updateUiState(true, `연결됨: ${device.name || 'RoboDog'}`);
-            logEvent('[BLE]', `🎉 로보독 하드웨어와 실제 무선 블루투스 연결이 완료되었습니다!`, 'success');
-            VoiceEngine.speak('로보독과 무선 블루투스로 연결되었습니다.');
+            const devName = device.name || 'RoboDog-HW';
+            this.updateUiState(true, `연결됨: ${devName}`, devName);
+            this.logTerminal(`🎉 [성공] 실제 로봇개 하드웨어 [${devName}] 무선 페어링 완료!`, 'tx');
+            logEvent('[BLE]', `🎉 로봇개 [${devName}] 무선 블루투스 연결 성공!`, 'success');
+            VoiceEngine.speak(`로봇개와 무선 블루투스로 연결되었습니다.`);
+
+            // 백엔드 상태 동기화
+            fetch('/api/robodog/ble/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ connected: true, device_name: devName, battery: AppState.bleBattery })
+            }).catch(() => {});
 
         } catch (error) {
             if (error.name === 'NotFoundError') {
-                logEvent('[BLE]', '사용자가 블루투스 검색 창을 취소했습니다. [가상 BLE 모드]로 동작합니다.', 'info');
+                this.logTerminal('블루투스 검색 창이 취소되었습니다.', 'warn');
             } else {
-                logEvent('[BLE]', `실제 BLE 연결 중 예외 발생 (${error.message}). [가상 BLE 모드]로 동작합니다.`, 'warn');
+                this.logTerminal(`BLE 연결 예외 (${error.message}) -> [가상 BLE 모드] 실행`, 'err');
             }
             this.enableMockMode();
         }
@@ -174,8 +299,19 @@ const BleController = {
     enableMockMode() {
         AppState.isBleConnected = true;
         AppState.isMockBle = true;
-        this.updateUiState(true, '가상 시뮬레이션 (연결됨)');
-        logEvent('[BLE]', '가상 로보독 BLE UART 시뮬레이터 활성화 완료.', 'success');
+        AppState.bleBattery = 94;
+        const mockName = 'RoboDog-Sim (Go2)';
+
+        this.updateUiState(true, '가상 시뮬레이션 연결됨', mockName);
+        this.logTerminal(`🤖 [가상 모드] ${mockName} 가상 시뮬레이터 활성화 완료.`, 'info');
+        logEvent('[BLE]', '가상 로보독 시뮬레이터 연결 완료.', 'success');
+        VoiceEngine.speak('가상 로봇개 시뮬레이터와 연결되었습니다.');
+
+        fetch('/api/robodog/ble/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connected: true, device_name: mockName, battery: 94 })
+        }).catch(() => {});
     },
 
     disconnect() {
@@ -189,8 +325,73 @@ const BleController = {
         AppState.isBleConnected = false;
         AppState.bleTxChar = null;
         AppState.bleRxChar = null;
-        this.updateUiState(false, '연결 해제됨');
-        logEvent('[BLE]', '로보독 블루투스 연결이 해제되었습니다.', 'warn');
+        this.updateUiState(false, '연결 대기 중', '미연결');
+        this.logTerminal('로봇개 블루투스 연결이 해제되었습니다.', 'warn');
+        logEvent('[BLE]', '로봇개 블루투스 연결이 해제되었습니다.', 'warn');
+        VoiceEngine.speak('로봇개 블루투스 연결이 해제되었습니다.');
+
+        fetch('/api/robodog/ble/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connected: false, device_name: 'None' })
+        }).catch(() => {});
+    },
+
+    updateUiConnecting() {
+        const hBadge = document.getElementById('bleHeaderBadge');
+        if (hBadge) {
+            hBadge.className = 'ble-badge badge-connecting';
+            hBadge.textContent = '검색중...';
+        }
+        const sDot = document.getElementById('bleStatusDot');
+        const sText = document.getElementById('bleStatusText');
+        if (sDot) sDot.className = 'status-dot dot-connecting';
+        if (sText) sText.textContent = '디바이스 검색 중...';
+    },
+
+    updateUiState(connected, text, deviceName = '미연결') {
+        // 1. 헤더 배지 & 텍스트
+        const hBadge = document.getElementById('bleHeaderBadge');
+        const hText = document.getElementById('bleHeaderText');
+        if (hBadge) {
+            hBadge.className = `ble-badge ${connected ? 'badge-on' : 'badge-off'}`;
+            hBadge.textContent = connected ? (AppState.isMockBle ? 'SIM' : 'ON') : 'OFF';
+        }
+        if (hText) {
+            hText.textContent = connected ? (AppState.isMockBle ? '가상 로봇개' : '로봇개 연결됨') : '로봇개 연결';
+        }
+
+        // 2. 어르신 화면 버튼
+        const sBtnText = document.getElementById('seniorBleBtnText');
+        if (sBtnText) {
+            sBtnText.textContent = connected ? '로봇개 연결됨 (ON)' : '로봇개 연결 (BLE)';
+        }
+
+        // 3. 모달 HUD
+        const dot = document.getElementById('bleStatusDot');
+        const textEl = document.getElementById('bleStatusText');
+        const devEl = document.getElementById('bleDeviceNameText');
+        const batFill = document.getElementById('bleBatteryFill');
+        const batText = document.getElementById('bleBatteryText');
+
+        if (dot) dot.className = `status-dot ${connected ? 'dot-connected' : 'dot-disconnected'}`;
+        if (textEl) textEl.textContent = text;
+        if (devEl) devEl.textContent = deviceName;
+        if (batFill) batFill.style.width = `${AppState.bleBattery}%`;
+        if (batText) batText.textContent = `${AppState.bleBattery}%`;
+
+        // 4. 모달 액션 버튼 토글
+        const btnPairReal = document.getElementById('btnBlePairReal');
+        const btnPairVirt = document.getElementById('btnBlePairVirtual');
+        const btnDisconn = document.getElementById('btnBleDisconnect');
+
+        if (btnPairReal) btnPairReal.style.display = connected ? 'none' : 'inline-flex';
+        if (btnPairVirt) btnPairVirt.style.display = connected ? 'none' : 'inline-flex';
+        if (btnDisconn) btnDisconn.style.display = connected ? 'inline-flex' : 'none';
+
+        // 5. 튜닝 탭 버튼
+        const btnOld = document.getElementById('btnBleToggle');
+        if (btnOld) btnOld.textContent = connected ? (AppState.isMockBle ? '실제 BLE 검색' : '연결 해제') : '🔗 실제 BLE 연결';
     },
 
     /**
@@ -198,7 +399,15 @@ const BleController = {
      */
     async sendPacket(command) {
         const fullPacket = `${command}\n`;
+        this.logTerminal(`[TX 송신] >> ${command}`, 'tx');
         logEvent('[BLE]', `[TX 송신] >> ${command}`, 'info');
+
+        // 백엔드 중계 API 비동기 알림
+        fetch('/api/robodog/ble/command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command })
+        }).catch(() => {});
 
         if (AppState.isMockBle || !AppState.bleTxChar) {
             this.mockResponse(command);
@@ -215,39 +424,48 @@ const BleController = {
                 await AppState.bleTxChar.writeValue(data);
             }
         } catch (err) {
+            this.logTerminal(`BLE 패킷 전송 오류: ${err.message}`, 'err');
             logEvent('[ERROR]', `BLE 패킷 전송 실패: ${err.message}`, 'error');
-            // 전송 실패 시 가상 모드로 안전 대체
             this.mockResponse(command);
         }
     },
 
     handleIncomingData(data) {
-        logEvent('[BLE]', `[RX 수신] << ${data.trim()}`, 'info');
+        const clean = data.trim();
+        this.logTerminal(`[RX 수신] << ${clean}`, 'rx');
+        logEvent('[BLE]', `[RX 수신] << ${clean}`, 'info');
     },
 
     mockResponse(command) {
-        if (command.startsWith('CMD:START')) {
+        if (command.startsWith('CMD:START') || command === 'CMD:FORWARD') {
             this.updateTelemetry({ speed: (AppState.speed * 0.036).toFixed(1) + ' km/h' });
+            this.logTerminal(`[RX 수신] << ACK:MOVING speed=${(AppState.speed * 0.036).toFixed(1)}km/h`, 'rx');
         } else if (command.startsWith('CMD:STOP') || command.startsWith('CMD:ESTOP')) {
             this.updateTelemetry({ speed: '0.0 km/h' });
+            this.logTerminal('[RX 수신] << ACK:STOPPED mode=BRAKE_LOCKED', 'rx');
         } else if (command.startsWith('CMD:SPEED:')) {
             const spd = parseInt(command.split(':')[2]);
             this.updateTelemetry({ speed: (spd * 0.036).toFixed(1) + ' km/h' });
+            this.logTerminal(`[RX 수신] << ACK:GEAR_SET speed=${spd}`, 'rx');
+        } else if (command === 'CMD:STAND') {
+            this.logTerminal('[RX 수신] << ACK:POSTURE=STAND height=50cm', 'rx');
+        } else if (command === 'CMD:SIT') {
+            this.logTerminal('[RX 수신] << ACK:POSTURE=SIT height=25cm', 'rx');
+        } else if (command === 'CMD:PAW') {
+            this.logTerminal('[RX 수신] << ACK:ACTION=SHAKE_PAW success', 'rx');
+        } else if (command === 'CMD:GUARD') {
+            this.logTerminal('[RX 수신] << ACK:MODE=CLOSE_GUARD distance=80cm', 'rx');
         }
-    },
-
-    updateUiState(connected, text) {
-        const dot = document.getElementById('bleStatusDot');
-        const textEl = document.getElementById('bleStatusText');
-        const btn = document.getElementById('btnBleToggle');
-
-        if (dot) dot.className = `status-dot ${connected ? 'connected' : 'disconnected'}`;
-        if (textEl) textEl.textContent = text;
-        if (btn) btn.textContent = connected ? (AppState.isMockBle ? '실제 BLE 검색' : '연결 해제') : '🔗 실제 BLE 연결';
     },
 
     updateTelemetry(data) {
         if (data.battery !== undefined) {
+            AppState.bleBattery = data.battery;
+            const batFill = document.getElementById('bleBatteryFill');
+            const batText = document.getElementById('bleBatteryText');
+            if (batFill) batFill.style.width = `${data.battery}%`;
+            if (batText) batText.textContent = `${data.battery}%`;
+
             const el = document.getElementById('telemBattery');
             if (el) el.textContent = `🔋 ${data.battery}%`;
             const genBat = document.getElementById('generalBattery');
@@ -641,10 +859,12 @@ const VoiceEngine = {
 const AuthManager = {
     currentUser: null,
     modalEl: null,
+    ageModalEl: null,
     debounceTimer: null,
 
     init() {
         this.modalEl = document.getElementById('authModal');
+        this.ageModalEl = document.getElementById('ageModal');
         
         // 1. 헤더 로그인 버튼 및 모달 닫기 / 로그아웃 바인딩
         const btnOpenHeader = document.getElementById('btnOpenAuthModal');
@@ -667,6 +887,44 @@ const AuthManager = {
                 this.applyGuestState(true);
             });
         }
+
+        // 1-1. [신규] 만 나이 설정 모달 바인딩 (#ageModal)
+        const btnAgeQuick = document.getElementById('btnHeaderAgeQuick');
+        const btnCloseAge = document.getElementById('btnCloseAgeModal');
+        const btnApplyCustom = document.getElementById('btnApplyCustomAge');
+        const inputCustom = document.getElementById('inputCustomAge');
+
+        if (btnAgeQuick) {
+            btnAgeQuick.addEventListener('click', () => this.openAgeModal());
+        }
+        if (btnCloseAge) {
+            btnCloseAge.addEventListener('click', () => this.closeAgeModal());
+        }
+        if (btnApplyCustom && inputCustom) {
+            btnApplyCustom.addEventListener('click', () => {
+                const val = parseInt(inputCustom.value);
+                if (val && val > 0 && val <= 130) {
+                    this.setAge(val, true);
+                    this.closeAgeModal();
+                } else {
+                    alert('1부터 130 사이의 유효한 나이를 입력해 주세요.');
+                }
+            });
+            inputCustom.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    btnApplyCustom.click();
+                }
+            });
+        }
+
+        // 나이 빠른 선택 프리셋 버튼 바인딩
+        document.querySelectorAll('.btn-age-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const age = parseInt(btn.getAttribute('data-age') || '28');
+                this.setAge(age, true);
+                this.closeAgeModal();
+            });
+        });
 
         // 2. 탭 전환
         const tabLogin = document.getElementById('tabBtnLogin');
@@ -767,8 +1025,89 @@ const AuthManager = {
             this.applyGuestState(false);
         }
 
+        // 초기 나이 설정 적용
+        const savedAge = localStorage.getItem('robodog_user_age');
+        const initialAge = savedAge ? parseInt(savedAge) : (this.currentUser?.age || 28);
+        this.setAge(initialAge, false);
+
         // 프로필 목록 로드
         this.fetchProfiles();
+    },
+
+    openAgeModal() {
+        if (!this.ageModalEl) return;
+        const inputCustom = document.getElementById('inputCustomAge');
+        if (inputCustom) inputCustom.value = AppState.userAge;
+        this.ageModalEl.style.display = 'flex';
+    },
+
+    closeAgeModal() {
+        if (this.ageModalEl) this.ageModalEl.style.display = 'none';
+    },
+
+    /**
+     * 핵심 요구사항: 만 나이 설정 및 만 60세 미만/이상 모드 동적 제어
+     */
+    setAge(age, syncServer = true) {
+        let val = parseInt(age);
+        if (isNaN(val) || val < 1) val = 28;
+        
+        AppState.userAge = val;
+        const isEligible = val >= 60;
+        AppState.isSeniorEligible = isEligible;
+        localStorage.setItem('robodog_user_age', val);
+
+        // 1. 헤더 만 나이 칩 업데이트
+        const chipText = document.getElementById('headerAgeText');
+        if (chipText) {
+            chipText.textContent = `만 ${val}세`;
+        }
+
+        // 2. 모달 내 뱃지 업데이트
+        const badge = document.getElementById('currentAgeDisplayBadge');
+        if (badge) {
+            badge.textContent = `만 ${val}세 (${isEligible ? '노인+일반 모드 활성' : '일반 모드 전용'})`;
+            badge.style.background = isEligible ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #F59E0B, #D97706)';
+        }
+
+        // 3. 노인 모드 버튼 표시/숨김 처리
+        const btnSenior = document.getElementById('btnSeniorMode');
+        const btnGeneral = document.getElementById('btnGeneralMode');
+
+        if (!isEligible) {
+            // 만 60세 미만: 노인모드가 안 뜨게 숨김
+            if (btnSenior) {
+                btnSenior.style.display = 'none';
+            }
+            if (btnGeneral) {
+                btnGeneral.classList.add('active');
+            }
+            // 현재 노인 모드 화면이었다면 즉시 일반 모드로 자동 전환
+            if (AppState.currentMode === 'senior') {
+                switchMode('general');
+                VoiceEngine.speak(`현재 만 ${val}세입니다. 노인 안심 모드는 만 60세 이상 전용이므로 일반 모드로 자동 전환되었습니다.`, false);
+                logEvent('[AGE]', `⚠️ 만 ${val}세: 만 60세 미만이므로 [노인 모드]가 비활성화되고 [일반 모드]가 적용됩니다.`, 'warn');
+            }
+        } else {
+            // 만 60세 이상: 노인모드 버튼 노출 (일반모드도 당연히 사용 가능)
+            if (btnSenior) {
+                btnSenior.style.display = 'inline-flex';
+            }
+            logEvent('[AGE]', `👵 만 ${val}세 어르신 확인 완료! [노인 모드]와 [일반 모드]를 자유롭게 이용하실 수 있습니다.`, 'success');
+        }
+
+        // 4. 백엔드 동기화
+        if (syncServer) {
+            fetch('/api/auth/set_age', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    age: val,
+                    username: this.currentUser?.username,
+                    id: this.currentUser?.id
+                })
+            }).catch(() => {});
+        }
     },
 
     formatDisplayName(name) {
@@ -840,14 +1179,17 @@ const AuthManager = {
             const card = document.createElement('div');
             card.className = 'quick-profile-card';
             const cleanName = this.formatDisplayName(p.name);
+            const userAge = p.age || (p.name?.includes('순자') ? 73 : (p.name?.includes('승윤') ? 28 : 68));
+            const isSenior = userAge >= 60;
             card.innerHTML = `
                 <div>
-                    <div class="qp-name">👤 ${cleanName}</div>
+                    <div class="qp-name">👤 ${cleanName} <span class="preset-tag ${isSenior ? 'over' : 'under'}">만 ${userAge}세 (${isSenior ? '노인모드 가능' : '일반모드'})</span></div>
                     <div class="qp-addr">🏡 ${p.address} ${p.detail_address ? '(' + p.detail_address + ')' : ''}</div>
                 </div>
                 <span class="qp-badge">바로 선택</span>
             `;
             card.addEventListener('click', () => {
+                p.age = userAge;
                 this.setCurrentUser(p, true);
                 this.closeModal();
             });
@@ -872,6 +1214,7 @@ const AuthManager = {
 
             if (isEdit && this.currentUser) {
                 const nameInp = document.getElementById('inputRegName');
+                const ageInp = document.getElementById('inputRegAge');
                 const addrInp = document.getElementById('inputRegAddress');
                 const detInp = document.getElementById('inputRegDetailAddress');
                 const gNameInp = document.getElementById('inputRegGuardianName');
@@ -879,6 +1222,7 @@ const AuthManager = {
                 const noteInp = document.getElementById('inputRegNote');
 
                 if (nameInp) nameInp.value = this.currentUser.name || '';
+                if (ageInp) ageInp.value = this.currentUser.age || AppState.userAge;
                 if (addrInp) addrInp.value = this.currentUser.address || '';
                 if (detInp) detInp.value = this.currentUser.detail_address || '';
                 if (gNameInp) gNameInp.value = this.currentUser.guardian_name || '';
@@ -899,6 +1243,8 @@ const AuthManager = {
 
     async handleRegister() {
         const name = document.getElementById('inputRegName')?.value.trim();
+        const rawAge = document.getElementById('inputRegAge')?.value || '68';
+        const age = parseInt(rawAge) || 68;
         const username = document.getElementById('inputRegUsername')?.value.trim();
         const address = document.getElementById('inputRegAddress')?.value.trim();
         const detail_address = document.getElementById('inputRegDetailAddress')?.value.trim();
@@ -921,13 +1267,13 @@ const AuthManager = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name, username, password, address, detail_address, guardian_name, guardian_phone, note, lat, lng
+                    name, age, username, password, address, detail_address, guardian_name, guardian_phone, note, lat, lng
                 })
             });
             const data = await res.json();
             if (data.status === 'success' && data.user) {
                 const dispName = this.formatDisplayName(data.user.name);
-                alert(`🎉 ${dispName}의 안심 정보가 등록되었습니다!`);
+                alert(`🎉 ${dispName}의 안심 정보가 등록되었습니다! (만 ${age}세)`);
                 this.setCurrentUser(data.user, true);
                 this.fetchProfiles();
                 this.closeModal();
@@ -969,6 +1315,10 @@ const AuthManager = {
     setCurrentUser(user, notify = true) {
         this.currentUser = user;
         localStorage.setItem('robodog_current_user', JSON.stringify(user));
+
+        // 나이 연동
+        const userAge = user.age || (user.name?.includes('순자') ? 73 : (user.name?.includes('승윤') ? 28 : 68));
+        this.setAge(userAge, false);
 
         const dispName = this.formatDisplayName(user.name);
 
@@ -1018,9 +1368,9 @@ const AuthManager = {
             updateQuickDestinations(user.lat, user.lng);
         }
 
-        logEvent('[AUTH]', `👤 사용자 연동 완료: [${dispName}] (자택: ${user.address})`, 'success');
+        logEvent('[AUTH]', `👤 사용자 연동 완료: [${dispName}] (만 ${userAge}세, 자택: ${user.address})`, 'success');
         if (notify) {
-            VoiceEngine.speak(`안녕하세요, ${dispName}! 등록된 자택 주소로 안심 케어를 시작합니다.`, false);
+            VoiceEngine.speak(`안녕하세요, ${dispName}! 등록된 정보로 안심 케어를 시작합니다.`, false);
         }
     }
 };
@@ -3290,6 +3640,13 @@ function triggerSosAlert() {
 // 11. 모드 전환 인터랙션 (👵 어르신 ↔ 👤 일반 모드 통합)
 // ---------------------------------------------------------
 function switchMode(targetMode) {
+    // 만 60세 미만은 노인 모드 접근 차단
+    if (targetMode === 'senior' && !AppState.isSeniorEligible) {
+        alert(`⚠️ [모드 이용 제한 안내]\n\n노인 안심 모드는 만 60세 이상 어르신 전용 기능입니다.\n(현재 설정된 나이: 만 ${AppState.userAge}세)\n\n상단 [🎂 만 ${AppState.userAge}세] 버튼을 누르시면 나이를 변경하실 수 있습니다.`);
+        logEvent('[AUTH]', `만 ${AppState.userAge}세: 만 60세 미만이므로 [노인 안심 모드] 접근이 제한되었습니다.`, 'warn');
+        return;
+    }
+
     AppState.currentMode = targetMode;
 
     const btnSenior = document.getElementById('btnSeniorMode');
@@ -3519,8 +3876,9 @@ document.addEventListener('DOMContentLoaded', () => {
             logEvent('[ERROR]', `설정 로드 실패: ${err.message}`, 'error');
         });
 
-    // 11. 지도, 회원 인증 매니저, 내 집 주소 매니저, 실시간 검색 자동완성, 캔버스, 신호등, AI 돌봄 엔진, 전체 장소 모달, Face ID 모달 초기화
+    // 11. 지도, 회원 인증 매니저, 로봇개 BLE, 내 집 주소 매니저, 실시간 검색 자동완성, 캔버스, 신호등, AI 돌봄 엔진, 전체 장소 모달, Face ID 모달 초기화
     AuthManager.init();
+    BleController.init();
     HomeAddressManager.init();
     AutocompleteSearchManager.init();
     RealMapManager.init();
