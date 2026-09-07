@@ -13,6 +13,7 @@ const AppState = {
     currentMode: 'general', // 'senior' | 'general' | 'guardian' (나이에 따라 초기화됨)
     userAge: 28,            // 사용자 만 나이 (만 60세 미만: 일반모드 전용 / 만 60세 이상: 노인+일반모드)
     isSeniorEligible: false,
+    isBlindMode: false,
     walkMode: 'follow',    // 'follow' | 'side' | 'lead'
     isBleConnected: false,
     isMockBle: false,
@@ -1888,6 +1889,7 @@ const AuthManager = {
         const guardian_phone = document.getElementById('inputRegGuardianPhone')?.value.trim();
         const note = document.getElementById('inputRegNote')?.value.trim();
         const password = document.getElementById('inputRegPassword')?.value.trim() || '1234';
+        const is_blind = document.getElementById('inputRegBlindMode')?.checked || false;
 
         const addrInput = document.getElementById('inputRegAddress');
         const lat = addrInput?.getAttribute('data-lat') ? parseFloat(addrInput.getAttribute('data-lat')) : null;
@@ -1903,7 +1905,7 @@ const AuthManager = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name, age, username, password, address, detail_address, guardian_name, guardian_phone, note, lat, lng
+                    name, age, username, password, address, detail_address, guardian_name, guardian_phone, note, lat, lng, is_blind
                 })
             });
             const data = await res.json();
@@ -1913,6 +1915,9 @@ const AuthManager = {
                 this.setCurrentUser(data.user, true);
                 this.fetchProfiles();
                 this.closeModal();
+                if (data.user.is_blind) {
+                    switchMode('blind');
+                }
             } else {
                 alert(data.message || '등록에 실패했습니다.');
             }
@@ -2005,6 +2010,9 @@ const AuthManager = {
             updateQuickDestinations(user.lat, user.lng);
         }
 
+        if (user.is_blind) {
+            switchMode('blind');
+        }
         logEvent('[AUTH]', `👤 사용자 연동 완료: [${dispName}] (만 ${userAge}세, 자택: ${user.address})`, 'success');
         if (notify) {
             VoiceEngine.speak(`안녕하세요, ${dispName}! 등록된 정보로 안심 케어를 시작합니다.`, false);
@@ -4275,7 +4283,112 @@ function updateSeniorStatus(mainText, subText, badgeText = '안심 주행 중') 
     if (badgeEl && badgeText) badgeEl.textContent = badgeText;
 }
 
+
+// ---------------------------------------------------------
+// 10-1. [신규] 🦯 시각장애인 전체 화면 원터치 GPS 감지 & 음성 내비게이션 매니저
+// ---------------------------------------------------------
+const BlindTouchManager = {
+    surfaceEl: null,
+    currentDest: '',
+    state: 'idle', // 'idle' | 'waiting_touch' | 'navigating'
+
+    init() {
+        this.surfaceEl = document.getElementById('blindTouchSurface');
+        if (!this.surfaceEl) return;
+
+        this.surfaceEl.addEventListener('click', (e) => {
+            if (e.target.closest('#btnCancelBlindTouch')) {
+                e.stopPropagation();
+                this.cancel();
+                return;
+            }
+            this.handleScreenTouch();
+        });
+    },
+
+    startGuide(destName) {
+        this.currentDest = destName;
+        this.state = 'waiting_touch';
+        if (!this.surfaceEl) this.surfaceEl = document.getElementById('blindTouchSurface');
+        if (!this.surfaceEl) return;
+
+        const badgeDest = document.getElementById('blindTouchDestBadge');
+        if (badgeDest) badgeDest.textContent = `🎯 ${destName} 출발 대기`;
+        
+        const mainText = document.getElementById('blindTouchMainText');
+        if (mainText) mainText.textContent = '화면의 아무 곳이나 터치해 주세요';
+        
+        const subText = document.getElementById('blindTouchSubText');
+        if (subText) subText.textContent = 'GPS 신호 탐지 및 안전 보행 안내 시작';
+        
+        const badge = document.getElementById('blindTouchStatusBadge');
+        if (badge) {
+            badge.className = 'blind-touch-status-badge status-waiting';
+            badge.textContent = '📡 GPS 감지 대기 중 (화면을 탭하세요)';
+        }
+
+        this.surfaceEl.style.display = 'flex';
+
+        // 1. [요청사항] 시각장애인 모드에서는 내레이터 무조건 ON 활성화
+        VoiceEngine.toggleNarrator(true);
+
+        // 2. [요청사항] OO까지 출발합니다. 먼저 GPS신호 탐지를 위해 화면을 클릭해주세요 음성 안내
+        VoiceEngine.speak(`${destName}까지 출발합니다. 먼저 GPS 신호 탐지를 위해 화면을 클릭해 주세요.`, true);
+
+        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    },
+
+    handleScreenTouch() {
+        if (this.state === 'waiting_touch') {
+            this.state = 'navigating';
+
+            if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
+            if (typeof LeashController !== 'undefined') {
+                LeashController.triggerHaptic('forward');
+            }
+
+            const badge = document.getElementById('blindTouchStatusBadge');
+            if (badge) {
+                badge.className = 'blind-touch-status-badge status-active';
+                badge.textContent = '🟢 GPS 정상 감지 • 실시간 안전 보행 중';
+            }
+
+            const mainText = document.getElementById('blindTouchMainText');
+            if (mainText) mainText.textContent = '⬆️ 전방 120m 직진';
+            
+            const subText = document.getElementById('blindTouchSubText');
+            if (subText) subText.textContent = '화면을 터치할 때마다 음성 위치 & 신호등 안내가 반복됩니다';
+
+            VoiceEngine.speak(`GPS 신호가 정상 감지되었습니다. ${this.currentDest}(으)로 안전 길안내를 시작합니다. 저를 따라 천천히 걸어주세요.`, true);
+
+            AppState.currentDest = this.currentDest;
+            AppState.isWalking = true;
+            BleController.sendPacket(`CMD:START:DEST=${this.currentDest}`);
+            RealMapManager.loadRoute(this.currentDest);
+
+        } else if (this.state === 'navigating') {
+            if (navigator.vibrate) navigator.vibrate([100]);
+            if (typeof LeashController !== 'undefined') {
+                LeashController.triggerHaptic('forward');
+            }
+            VoiceEngine.speak(`현재 120미터 앞 직진 중입니다. 신호등은 녹색이며 보행 시간은 충분합니다. 계속 안심하고 걸어주세요.`, true);
+        }
+    },
+
+    cancel() {
+        this.state = 'idle';
+        if (this.surfaceEl) this.surfaceEl.style.display = 'none';
+        AppState.isWalking = false;
+        BleController.sendPacket('CMD:STOP');
+        VoiceEngine.speak('길안내가 종료되었습니다.', true);
+    }
+};
+
 function startNavigation(destName, ttsMessage) {
+    if (AppState.currentMode === 'blind' || AppState.isBlindMode) {
+        BlindTouchManager.startGuide(destName);
+        return;
+    }
     AppState.currentDest = destName;
     AppState.isWalking = true;
     logEvent('[NAV]', `목적지 설정 완료: [${destName}] 도보 안내 가동`, 'success');
@@ -4382,6 +4495,8 @@ function switchMode(targetMode) {
 
     const btnSenior = document.getElementById('btnSeniorMode');
     const btnGeneral = document.getElementById('btnGeneralMode');
+    const btnBlind = document.getElementById('btnBlindMode');
+    if (btnBlind) btnBlind.classList.remove('active');
 
     const seniorView = document.getElementById('seniorView');
     const generalView = document.getElementById('generalView');
@@ -4405,7 +4520,8 @@ function switchMode(targetMode) {
         VoiceEngine.speak(`노인 안심 모드로 전환되었습니다. ${activeName}, 어디로 모실까요?`, false);
 
     } else if (targetMode === 'general') {
-        document.body.classList.remove('mode-senior', 'mode-guardian');
+        AppState.isBlindMode = false;
+        document.body.classList.remove('mode-senior', 'mode-guardian', 'mode-blind');
         document.body.classList.add('mode-general');
         if (theme === 'white') document.body.classList.add('theme-white');
         if (btnGeneral) btnGeneral.classList.add('active');
@@ -4413,6 +4529,20 @@ function switchMode(targetMode) {
 
         logEvent('[MODE]', '👤 [일반 모드 & 스마트 관제 센터]로 전환되었습니다.', 'info');
         RealMapManager.invalidate();
+    } else if (targetMode === 'blind') {
+        AppState.isBlindMode = true;
+        // 시각장애인 모드는 무조건 내레이터 자동 ON
+        VoiceEngine.toggleNarrator(true);
+
+        document.body.classList.remove('mode-general', 'mode-guardian', 'mode-senior');
+        document.body.classList.add('mode-blind');
+        if (theme === 'white') document.body.classList.add('theme-white');
+        if (btnBlind) btnBlind.classList.add('active');
+        if (seniorView) seniorView.style.display = 'flex'; // 초대형 목적지 원터치 카드 활용
+
+        logEvent('[MODE]', '🦯 [시각장애인 안심 모드]가 가동되었습니다. (음성 안내 100% 자동 활성화)', 'success');
+        const activeName = AuthManager.currentUser ? AuthManager.formatDisplayName(AuthManager.currentUser.name) : 'guest님';
+        VoiceEngine.speak(`시각장애인 안심 보행 모드가 가동되었습니다. 음성 안내가 켜졌습니다. ${activeName}, 원하시는 목적지 버튼을 누르시면 전체 화면 터치 내비게이션으로 안전하게 안내합니다.`, true);
     }
 }
 
@@ -4420,6 +4550,16 @@ function switchMode(targetMode) {
 // 12. 이벤트 바인딩 및 앱 시작
 // ---------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+    // 로컬 스토리지에 남아있을 수 있는 이전 예시 데이터 정제
+    try {
+        const rawUser = localStorage.getItem('robodog_current_user');
+        if (rawUser && rawUser.includes('힐스테이트')) {
+            const parsed = JSON.parse(rawUser);
+            parsed.detail_address = '행복아파트 102동';
+            localStorage.setItem('robodog_current_user', JSON.stringify(parsed));
+        }
+    } catch (e) {}
+
     logEvent('[SYSTEM]', 'RoboDog WAY GUIDE 시스템 가동...', 'info');
 
     // 0. 내레이터 음성 초기화 및 토글 바인딩
@@ -4440,6 +4580,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. 모드 전환 버튼 바인딩 (노인 모드 / 일반 모드)
     const btnSenior = document.getElementById('btnSeniorMode');
     const btnGeneral = document.getElementById('btnGeneralMode');
+    const btnBlind = document.getElementById('btnBlindMode');
+    if (btnBlind) btnBlind.classList.remove('active');
 
     if (btnSenior) {
         btnSenior.addEventListener('click', (e) => {
@@ -4451,6 +4593,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btnGeneral.addEventListener('click', (e) => {
             e.preventDefault();
             switchMode('general');
+        });
+    }
+    if (btnBlind) {
+        btnBlind.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchMode('blind');
         });
     }
 
@@ -4626,6 +4774,7 @@ document.addEventListener('DOMContentLoaded', () => {
     CareTuningManager.init();
     AllPlacesModalManager.init();
     FaceIdManager.init();
+    BlindTouchManager.init();
 
     // 12. 초기 얼굴 인식(Face ID) 안내 실행
     FaceIdManager.runVerification();

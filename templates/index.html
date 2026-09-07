@@ -1395,6 +1395,261 @@
             color: #0F172A !important;
         }
 
+    
+        /* =========================================================
+           [v14.0] 모달 헤더 텍스트 고대비 & 화이트 모드 목적지 카드 & 시각장애인 모드
+           ========================================================= */
+        /* 1. 실제 보행 목적지 전체 목록 모달 타이틀 고대비 */
+        .places-modal-title-group h2,
+        body.theme-white .places-modal-title-group h2,
+        .all-places-card .places-modal-title-group h2 {
+            color: #0F172A !important;
+            font-size: 20px !important;
+            font-weight: 900 !important;
+        }
+        .places-modal-header,
+        body.theme-white .places-modal-header {
+            background: #FFFFFF !important;
+            border-bottom: 1.5px solid #E2E8F0 !important;
+        }
+        .all-places-card,
+        body.theme-white .all-places-card {
+            background: #FFFFFF !important;
+            border: 1.5px solid #CBD5E1 !important;
+            color: #0F172A !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.22) !important;
+        }
+
+        /* 2. 사용자 안심 회원 관리 / 로그인 모달 타이틀 고대비 */
+        .auth-header-title h2,
+        body.theme-white .auth-header-title h2,
+        .auth-card .auth-header-title h2 {
+            color: #0F172A !important;
+            font-size: 20px !important;
+            font-weight: 900 !important;
+        }
+        .auth-header,
+        body.theme-white .auth-header {
+            background: #FFFFFF !important;
+            border-bottom: 1.5px solid #E2E8F0 !important;
+        }
+        .auth-card,
+        body.theme-white .auth-card {
+            background: #FFFFFF !important;
+            border: 1.5px solid #CBD5E1 !important;
+            color: #0F172A !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.22) !important;
+        }
+        .auth-tabs,
+        body.theme-white .auth-tabs {
+            background: #F1F5F9 !important;
+            border: 1px solid #CBD5E1 !important;
+            padding: 4px !important;
+        }
+        .auth-tab,
+        body.theme-white .auth-tab {
+            color: #475569 !important;
+            font-weight: 700 !important;
+        }
+        .auth-tab.active,
+        body.theme-white .auth-tab.active {
+            background: #0284C7 !important;
+            color: #FFFFFF !important;
+            font-weight: 900 !important;
+        }
+
+        /* 3. 어르신 / 목적지 대형 카드 화이트 모드 고대비 (검은 바탕에 검은 글씨 버그 완전 제거) */
+        body.theme-white .dest-card {
+            background: #FFFFFF !important;
+            border-width: 2.5px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+        }
+        body.theme-white .dest-card .dest-name {
+            color: #0F172A !important;
+            font-size: 28px !important;
+            font-weight: 900 !important;
+        }
+        body.theme-white .dest-card .dest-desc {
+            color: #475569 !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+        }
+        body.theme-white .dest-card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+        }
+        body.theme-white .card-hospital { border-color: #0284C7 !important; }
+        body.theme-white .card-hospital .dest-name { color: #0369A1 !important; }
+
+        body.theme-white .card-pharmacy { border-color: #0D9488 !important; }
+        body.theme-white .card-pharmacy .dest-name { color: #0F766E !important; }
+
+        body.theme-white .card-home { border-color: #16A34A !important; }
+        body.theme-white .card-home .dest-name { color: #15803D !important; }
+
+        body.theme-white .card-center { border-color: #D97706 !important; }
+        body.theme-white .card-center .dest-name { color: #B45309 !important; }
+
+        body.theme-white .card-trail { border-color: #059669 !important; }
+        body.theme-white .card-trail .dest-name { color: #047857 !important; }
+
+        body.theme-white .card-mart { border-color: #EA580C !important; }
+        body.theme-white .card-mart .dest-name { color: #C2410C !important; }
+
+        body.theme-white .card-subway { border-color: #7C3AED !important; }
+        body.theme-white .card-subway .dest-name { color: #6D28D9 !important; }
+
+        body.theme-white .card-gov { border-color: #475569 !important; }
+        body.theme-white .card-gov .dest-name { color: #334155 !important; }
+
+        /* 4. 회원가입 시각장애인 모드 옵션 카드 */
+        .blind-mode-reg-card {
+            background: #F0F9FF !important;
+            border: 1.5px solid #BAE6FD !important;
+            border-radius: 14px !important;
+            padding: 14px 16px !important;
+            margin-top: 10px !important;
+        }
+        .blind-checkbox-label {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            cursor: pointer !important;
+            margin: 0 !important;
+        }
+        .blind-reg-checkbox {
+            width: 22px !important;
+            height: 22px !important;
+            accent-color: #0284C7 !important;
+            cursor: pointer !important;
+        }
+        .blind-reg-title {
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            color: #0369A1 !important;
+        }
+        .blind-reg-desc {
+            font-size: 12px !important;
+            color: #0284C7 !important;
+            margin-top: 6px !important;
+            padding-left: 32px !important;
+            line-height: 1.4 !important;
+        }
+
+        /* 5. 시각장애인 전체 화면 원터치 버튼 서피스 */
+        .blind-touch-surface {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: #000000 !important;
+            z-index: 9998 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            user-select: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+            padding: 24px !important;
+            box-sizing: border-box !important;
+            animation: blindFadeIn 0.25s ease-out !important;
+        }
+        @keyframes blindFadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .blind-touch-content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 18px !important;
+            max-width: 600px !important;
+            width: 100% !important;
+        }
+        .blind-touch-ripple-circle {
+            width: 120px !important;
+            height: 120px !important;
+            background: rgba(250, 204, 21, 0.15) !important;
+            border: 3px solid #FACC15 !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            animation: ripplePulse 1.8s infinite ease-out !important;
+        }
+        @keyframes ripplePulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 35px rgba(250, 204, 21, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+        .blind-touch-icon {
+            font-size: 56px !important;
+        }
+        .blind-dest-badge {
+            background: #1E3A8A !important;
+            color: #93C5FD !important;
+            border: 1.5px solid #3B82F6 !important;
+            border-radius: 9999px !important;
+            padding: 8px 20px !important;
+            font-size: 16px !important;
+            font-weight: 800 !important;
+        }
+        .blind-touch-main-instruction {
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #FACC15 !important;
+            margin: 0 !important;
+            line-height: 1.3 !important;
+            text-shadow: 0 2px 10px rgba(250, 204, 21, 0.3) !important;
+        }
+        .blind-touch-sub-instruction {
+            font-size: 18px !important;
+            color: #FFFFFF !important;
+            margin: 0 !important;
+            font-weight: 700 !important;
+            line-height: 1.4 !important;
+        }
+        .blind-touch-status-badge {
+            padding: 12px 24px !important;
+            border-radius: 14px !important;
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            margin-top: 8px !important;
+        }
+        .blind-touch-status-badge.status-waiting {
+            background: rgba(234, 179, 8, 0.25) !important;
+            border: 2px solid #EAB308 !important;
+            color: #FEF08A !important;
+        }
+        .blind-touch-status-badge.status-active {
+            background: rgba(34, 197, 94, 0.25) !important;
+            border: 2px solid #22C55E !important;
+            color: #86EFAC !important;
+        }
+        .blind-touch-hint {
+            font-size: 13px !important;
+            color: #94A3B8 !important;
+            margin-top: 4px !important;
+        }
+        .btn-blind-cancel-act {
+            margin-top: 14px !important;
+            background: #334155 !important;
+            color: #FFFFFF !important;
+            border: 1.5px solid #64748B !important;
+            border-radius: 12px !important;
+            padding: 12px 28px !important;
+            font-size: 15px !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        .btn-blind-cancel-act:hover {
+            background: #DC2626 !important;
+            border-color: #EF4444 !important;
+        }
+
     </style>
 
 </head>
@@ -1455,6 +1710,9 @@
                 </button>
                 <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
                     👤 일반 모드
+                </button>
+                <button id="btnBlindMode" class="btn-mode btn-mode-blind" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 터치 내비게이션)">
+                    🦯 시각장애인 모드
                 </button>
             </div>
         </div>
@@ -2067,6 +2325,17 @@
                     <div class="auth-form-group flex-1">
                         <label for="inputRegGuardianPhone">보호자 비상 연락처</label>
                         <input type="text" id="inputRegGuardianPhone" placeholder="보호자 비상 연락처를 입력하세요">
+                    </div>
+                </div>
+
+                <!-- [신규] 시각장애인 안심 모드 체크박스 -->
+                <div class="auth-form-group blind-mode-reg-card">
+                    <label class="blind-checkbox-label">
+                        <input type="checkbox" id="inputRegBlindMode" class="blind-reg-checkbox">
+                        <span class="blind-reg-title">🦯 시각장애인 안심 모드 (음성 100% + 전체 화면 원터치 길안내)</span>
+                    </label>
+                    <div class="blind-reg-desc">
+                        체크 시 웹앱 실행 즉시 <strong>내레이터 음성이 무조건 ON</strong>으로 켜지며, 목적지 출발 시 <strong>화면 전체가 커다란 버튼</strong>으로 작동합니다.
                     </div>
                 </div>
 
@@ -2824,6 +3093,27 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=10.0_compact_modal"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=14.0_blind_mode"></script>
+    <!-- =========================================================
+         [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
+         ========================================================= -->
+    <div id="blindTouchSurface" class="blind-touch-surface" style="display: none;">
+        <div class="blind-touch-content">
+            <div class="blind-touch-ripple-circle">
+                <span class="blind-touch-icon">👆</span>
+            </div>
+            <div id="blindTouchDestBadge" class="blind-dest-badge">목적지 준비 중</div>
+            <h1 id="blindTouchMainText" class="blind-touch-main-instruction">화면의 아무 곳이나 터치해 주세요</h1>
+            <p id="blindTouchSubText" class="blind-touch-sub-instruction">GPS 신호 탐지 및 안전 보행 안내 시작</p>
+            <div id="blindTouchStatusBadge" class="blind-touch-status-badge status-waiting">
+                📡 GPS 감지 대기 중 (화면을 탭하세요)
+            </div>
+            <div class="blind-touch-hint">
+                💡 손끝으로 화면 아무 곳을 탭하시면 즉시 음성과 햅틱으로 길안내가 시작됩니다
+            </div>
+            <button type="button" id="btnCancelBlindTouch" class="btn-blind-cancel-act">✕ 길안내 종료</button>
+        </div>
+    </div>
+
 </body>
 </html>
