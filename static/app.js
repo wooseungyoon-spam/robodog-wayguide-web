@@ -275,9 +275,9 @@ const BleController = {
 
             const devName = device.name || 'RoboDog-HW';
             this.updateUiState(true, `연결됨: ${devName}`, devName);
-            this.logTerminal(`🎉 [성공] 실제 로봇개 하드웨어 [${devName}] 무선 페어링 완료!`, 'tx');
-            logEvent('[BLE]', `🎉 로봇개 [${devName}] 무선 블루투스 연결 성공!`, 'success');
-            VoiceEngine.speak(`로봇개와 무선 블루투스로 연결되었습니다.`);
+            this.logTerminal(`🎉 [성공] 실제 로보독 하드웨어 [${devName}] 무선 페어링 완료!`, 'tx');
+            logEvent('[BLE]', `🎉 로보독 [${devName}] 무선 블루투스 연결 성공!`, 'success');
+            VoiceEngine.speak(`로보독과 무선 블루투스로 연결되었습니다.`);
 
             // 백엔드 상태 동기화
             fetch('/api/robodog/ble/status', {
@@ -305,7 +305,7 @@ const BleController = {
         this.updateUiState(true, '가상 시뮬레이션 연결됨', mockName);
         this.logTerminal(`🤖 [가상 모드] ${mockName} 가상 시뮬레이터 활성화 완료.`, 'info');
         logEvent('[BLE]', '가상 로보독 시뮬레이터 연결 완료.', 'success');
-        VoiceEngine.speak('가상 로봇개 시뮬레이터와 연결되었습니다.');
+        VoiceEngine.speak('가상 로보독 시뮬레이터와 연결되었습니다.');
 
         fetch('/api/robodog/ble/status', {
             method: 'POST',
@@ -326,9 +326,9 @@ const BleController = {
         AppState.bleTxChar = null;
         AppState.bleRxChar = null;
         this.updateUiState(false, '연결 대기 중', '미연결');
-        this.logTerminal('로봇개 블루투스 연결이 해제되었습니다.', 'warn');
-        logEvent('[BLE]', '로봇개 블루투스 연결이 해제되었습니다.', 'warn');
-        VoiceEngine.speak('로봇개 블루투스 연결이 해제되었습니다.');
+        this.logTerminal('로보독 블루투스 연결이 해제되었습니다.', 'warn');
+        logEvent('[BLE]', '로보독 블루투스 연결이 해제되었습니다.', 'warn');
+        VoiceEngine.speak('로보독 블루투스 연결이 해제되었습니다.');
 
         fetch('/api/robodog/ble/status', {
             method: 'POST',
@@ -358,13 +358,13 @@ const BleController = {
             hBadge.textContent = connected ? (AppState.isMockBle ? 'SIM' : 'ON') : 'OFF';
         }
         if (hText) {
-            hText.textContent = connected ? (AppState.isMockBle ? '가상 로봇개' : '로봇개 연결됨') : '로봇개 연결';
+            hText.textContent = connected ? (AppState.isMockBle ? '가상 로보독' : '로보독 연결됨') : '로보독 연결';
         }
 
         // 2. 어르신 화면 버튼
         const sBtnText = document.getElementById('seniorBleBtnText');
         if (sBtnText) {
-            sBtnText.textContent = connected ? '로봇개 연결됨 (ON)' : '로봇개 연결 (BLE)';
+            sBtnText.textContent = connected ? '로보독 연결됨 (ON)' : '로보독 연결 (BLE)';
         }
 
         // 3. 모달 HUD
@@ -1025,12 +1025,33 @@ const AuthManager = {
             this.applyGuestState(false);
         }
 
-        // 초기 나이 설정 적용
+        // 초기 저장된 나이 로드 (기본값: 28세)
+        let storedAge = 28;
         const savedAge = localStorage.getItem('robodog_user_age');
-        const initialAge = savedAge ? parseInt(savedAge) : (this.currentUser?.age || 28);
-        this.setAge(initialAge, false);
+        if (savedAge) {
+            const parsed = parseInt(savedAge);
+            if (!isNaN(parsed) && parsed > 0) storedAge = parsed;
+        } else if (this.currentUser && this.currentUser.age) {
+            storedAge = this.currentUser.age;
+        }
+        this.setAge(storedAge, false);
 
-        // 프로필 목록 로드
+        // 만 60세 미만일 경우 새로고침 시 무조건 일반 모드로 강제
+        if (AppState.userAge < 60) {
+            AppState.currentMode = 'general';
+            const sView = document.getElementById('seniorView');
+            const gView = document.getElementById('generalView');
+            const bSenior = document.getElementById('btnSeniorMode');
+            const bGeneral = document.getElementById('btnGeneralMode');
+            if (sView) sView.style.setProperty('display', 'none', 'important');
+            if (gView) gView.style.setProperty('display', 'flex', 'important');
+            if (bSenior) bSenior.style.setProperty('display', 'none', 'important');
+            if (bGeneral) bGeneral.classList.add('active');
+            document.body.classList.remove('mode-senior');
+            document.body.classList.add('mode-general');
+        }
+
+        // 현재 기기 로컬 프로필 로드
         this.fetchProfiles();
     },
 
@@ -1074,18 +1095,29 @@ const AuthManager = {
         const btnSenior = document.getElementById('btnSeniorMode');
         const btnGeneral = document.getElementById('btnGeneralMode');
 
+        // 설정 모달 내 뱃지 및 입력창 동기화
+        const settingBadge = document.getElementById('settingAgeStatusBadge');
+        if (settingBadge) {
+            settingBadge.className = `setting-status-badge ${isEligible ? 'over' : 'under'}`;
+            settingBadge.textContent = `현재 상태: 만 ${val}세 (${isEligible ? '노인 안심 모드 + 일반 모드 사용 가능' : '일반 모드 전용'})`;
+        }
+        const inputSettingAge = document.getElementById('settingInputAge');
+        if (inputSettingAge && inputSettingAge !== document.activeElement) {
+            inputSettingAge.value = val;
+        }
+
         if (!isEligible) {
-            // 만 60세 미만: 노인모드가 안 뜨게 숨김
+            // 만 60세 미만: 노인모드 버튼 완전 숨김
             if (btnSenior) {
-                btnSenior.style.display = 'none';
+                btnSenior.style.setProperty('display', 'none', 'important');
             }
             if (btnGeneral) {
                 btnGeneral.classList.add('active');
             }
             // 현재 노인 모드 화면이었다면 즉시 일반 모드로 자동 전환
-            if (AppState.currentMode === 'senior') {
+            if (AppState.currentMode === 'senior' || document.body.classList.contains('mode-senior')) {
                 switchMode('general');
-                VoiceEngine.speak(`현재 만 ${val}세입니다. 노인 안심 모드는 만 60세 이상 전용이므로 일반 모드로 자동 전환되었습니다.`, false);
+                VoiceEngine.speak(`현재 만 ${val}세입니다. 일반 모드가 적용되었습니다.`, false);
                 logEvent('[AGE]', `⚠️ 만 ${val}세: 만 60세 미만이므로 [노인 모드]가 비활성화되고 [일반 모드]가 적용됩니다.`, 'warn');
             }
         } else {
@@ -1160,13 +1192,27 @@ const AuthManager = {
         }
     },
 
-    async fetchProfiles() {
+    fetchProfiles() {
+        // 타 컴퓨터 가입자 노출 방지: 오직 현재 기기(로컬 브라우저)에서 로그인/등록된 프로필만 로드
+        let localAccounts = [];
         try {
-            const res = await fetch('/api/auth/profiles');
-            const data = await res.json();
-            if (data.status === 'success' && data.profiles) {
-                this.renderQuickProfiles(data.profiles);
-            }
+            const raw = localStorage.getItem('robodog_device_accounts');
+            if (raw) localAccounts = JSON.parse(raw);
+        } catch (e) {}
+
+        this.renderQuickProfiles(localAccounts);
+    },
+
+    saveLocalAccount(user) {
+        if (!user || !user.name) return;
+        try {
+            let accounts = [];
+            const raw = localStorage.getItem('robodog_device_accounts');
+            if (raw) accounts = JSON.parse(raw);
+            accounts = accounts.filter(a => a.id !== user.id && a.username !== user.username);
+            accounts.unshift(user);
+            if (accounts.length > 5) accounts = accounts.slice(0, 5);
+            localStorage.setItem('robodog_device_accounts', JSON.stringify(accounts));
         } catch (e) {}
     },
 
@@ -1175,16 +1221,26 @@ const AuthManager = {
         if (!listEl) return;
         listEl.innerHTML = '';
 
+        if (!profiles || profiles.length === 0) {
+            listEl.innerHTML = `
+                <div style="text-align: center; padding: 18px; color: #64748B; font-size: 13px; background: rgba(0,0,0,0.03); border-radius: 12px; border: 1px dashed #CBD5E1;">
+                    💻 이 기기(브라우저)에 저장된 사용자 계정이 없습니다.<br>
+                    위 <strong>[회원가입]</strong> 또는 <strong>[로그인]</strong>을 진행해 주세요.
+                </div>
+            `;
+            return;
+        }
+
         profiles.forEach(p => {
             const card = document.createElement('div');
             card.className = 'quick-profile-card';
             const cleanName = this.formatDisplayName(p.name);
-            const userAge = p.age || (p.name?.includes('순자') ? 73 : (p.name?.includes('승윤') ? 28 : 68));
+            const userAge = p.age || 28;
             const isSenior = userAge >= 60;
             card.innerHTML = `
                 <div>
                     <div class="qp-name">👤 ${cleanName} <span class="preset-tag ${isSenior ? 'over' : 'under'}">만 ${userAge}세 (${isSenior ? '노인모드 가능' : '일반모드'})</span></div>
-                    <div class="qp-addr">🏡 ${p.address} ${p.detail_address ? '(' + p.detail_address + ')' : ''}</div>
+                    <div class="qp-addr">🏡 ${p.address || ''} ${p.detail_address ? '(' + p.detail_address + ')' : ''}</div>
                 </div>
                 <span class="qp-badge">바로 선택</span>
             `;
@@ -1315,6 +1371,7 @@ const AuthManager = {
     setCurrentUser(user, notify = true) {
         this.currentUser = user;
         localStorage.setItem('robodog_current_user', JSON.stringify(user));
+        this.saveLocalAccount(user);
 
         // 나이 연동
         const userAge = user.age || (user.name?.includes('순자') ? 73 : (user.name?.includes('승윤') ? 28 : 68));
@@ -1549,13 +1606,14 @@ const FaceIdManager = {
         const canvas = this.canvasEl || document.getElementById('faceIdCanvas');
         const video = this.videoEl || document.getElementById('faceIdVideo');
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         canvas.width = canvas.parentElement.clientWidth || 480;
         canvas.height = canvas.parentElement.clientHeight || 320;
 
-        let startTime = Date.now();
-        const duration = 2400; // 2.4초 스캔 시퀀스
+        let scanScore = 0;
+        const requiredScore = 80;
+        let lastFaceWarning = '';
 
         const stepText = document.getElementById('faceIdStepText');
         const confText = document.getElementById('faceIdConfidenceText');
@@ -1566,77 +1624,166 @@ const FaceIdManager = {
         const loop = () => {
             if (!this.isScanning) return;
 
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(100, Math.round((elapsed / duration) * 100));
+            // 1. 실시간 캔버스 비디오 프레임 픽셀 분석 (얼굴 실제 존재 여부 판별)
+            let faceDetected = false;
+            let warningReason = '';
+
+            if (!isSimulation && video && video.videoWidth > 0 && video.readyState >= 2) {
+                if (!this.analysisCanvas) {
+                    this.analysisCanvas = document.createElement('canvas');
+                    this.analysisCtx = this.analysisCanvas.getContext('2d', { willReadFrequently: true });
+                }
+                const aCan = this.analysisCanvas;
+                const aCtx = this.analysisCtx;
+                aCan.width = 160;
+                aCan.height = 120;
+                aCtx.drawImage(video, 0, 0, aCan.width, aCan.height);
+
+                const sx = Math.floor(aCan.width * 0.25);
+                const sy = Math.floor(aCan.height * 0.15);
+                const sw = Math.floor(aCan.width * 0.5);
+                const sh = Math.floor(aCan.height * 0.7);
+                const imgData = aCtx.getImageData(sx, sy, sw, sh);
+                const d = imgData.data;
+
+                let sumLum = 0;
+                let skinPixels = 0;
+                const totalPixels = sw * sh;
+
+                for (let i = 0; i < d.length; i += 4) {
+                    const r = d[i];
+                    const g = d[i+1];
+                    const b = d[i+2];
+                    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                    sumLum += lum;
+
+                    if (r > 60 && g > 40 && b > 20 && r > g && r > b && (r - g) >= 8 && (r / (r + g + b + 0.001) > 0.35)) {
+                        skinPixels++;
+                    }
+                }
+
+                const avgLum = sumLum / totalPixels;
+                const skinRatio = skinPixels / totalPixels;
+
+                let sumSqDiff = 0;
+                for (let i = 0; i < d.length; i += 4) {
+                    const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+                    sumSqDiff += (lum - avgLum) * (lum - avgLum);
+                }
+                const stdDev = Math.sqrt(sumSqDiff / totalPixels);
+
+                if (avgLum < 20) {
+                    warningReason = '⚠️ 조명이 너무 어둡거나 카메라가 가려졌습니다';
+                } else if (avgLum > 240) {
+                    warningReason = '⚠️ 화면이 너무 밝아 얼굴을 식별할 수 없습니다';
+                } else if (stdDev < 14) {
+                    warningReason = '⚠️ 얼굴이 감지되지 않습니다 (단색/벽면 감지)';
+                } else if (skinRatio < 0.10) {
+                    warningReason = '⚠️ 정면 얼굴을 화면 중앙 타원 안에 맞춰주세요';
+                } else {
+                    faceDetected = true;
+                }
+            } else if (isSimulation) {
+                faceDetected = true;
+            }
+
+            // 2. 실제 얼굴 감지 여부에 따라 진행률 증가 또는 감소
+            if (faceDetected) {
+                scanScore = Math.min(requiredScore, scanScore + 1);
+            } else {
+                scanScore = Math.max(0, scanScore - 1.5);
+                lastFaceWarning = warningReason;
+            }
+
+            const progress = Math.min(100, Math.round((scanScore / requiredScore) * 100));
             this.scanProgress = progress;
 
             if (progressBar) progressBar.style.width = `${progress}%`;
 
-            // Canvas HUD 그래픽 렌더링
+            // 3. Canvas HUD 렌더링
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
             const rx = 85;
             const ry = 110;
 
-            // 단계별 안내 텍스트 및 신뢰도 업데이트
-            if (progress < 25) {
-                if (stepText) stepText.textContent = '👤 안면 프레임 감지 및 조명 최적화 중...';
-                if (confText) confText.textContent = `일치율: ${Math.round(progress * 1.5)}%`;
-                if (badge) { badge.textContent = '얼굴 감지 중'; badge.style.background = '#1E3A8A'; }
-            } else if (progress < 60) {
-                if (stepText) stepText.textContent = '🔍 68개 생체 랜드마크(눈, 코, 입, 턱선) 3D 분석 중...';
-                if (confText) confText.textContent = `일치율: ${Math.round(35 + (progress - 25) * 1.1)}%`;
-                if (badge) { badge.textContent = '생체 분석 중'; badge.style.background = '#065F46'; }
-            } else if (progress < 90) {
-                if (stepText) stepText.textContent = '🧠 사용자 암호화 프로필 대조 및 인증 확인 중...';
-                if (confText) confText.textContent = `일치율: ${Math.round(75 + (progress - 60) * 0.7)}%`;
-                if (badge) { badge.textContent = '프로필 대조 중'; badge.style.background = '#6D28D9'; }
-            }
-
-            // 랜드마크 점 찍기 (68 Points 가상 메쉬)
-            ctx.fillStyle = (progress >= 90) ? '#34D399' : '#38BDF8';
-            ctx.strokeStyle = (progress >= 90) ? 'rgba(52, 211, 153, 0.4)' : 'rgba(56, 189, 248, 0.3)';
-            ctx.lineWidth = 1;
-
-            const timePhase = Date.now() / 300;
-            const wobble = Math.sin(timePhase) * 2;
-
-            // 눈 주변 (12점)
-            const leftEye = { x: cx - 35, y: cy - 25 + wobble };
-            const rightEye = { x: cx + 35, y: cy - 25 + wobble };
-            [leftEye, rightEye].forEach(eye => {
-                for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
-                    const px = eye.x + Math.cos(a) * 10;
-                    const py = eye.y + Math.sin(a) * 6;
-                    ctx.beginPath();
-                    ctx.arc(px, py, 2, 0, Math.PI * 2);
-                    ctx.fill();
+            if (!faceDetected) {
+                if (badge) {
+                    badge.textContent = '얼굴 미감지';
+                    badge.style.background = '#DC2626';
                 }
-            });
+                if (stepText) stepText.textContent = lastFaceWarning || '카메라를 정면으로 바라봐 주세요';
+                if (confText) confText.textContent = `일치율: 0%`;
 
-            // 코 (8점)
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - 15 + wobble);
-            ctx.lineTo(cx, cy + 10 + wobble);
-            ctx.lineTo(cx - 12, cy + 18 + wobble);
-            ctx.lineTo(cx + 12, cy + 18 + wobble);
-            ctx.stroke();
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([8, 6]);
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
 
-            // 입술 (12점)
-            ctx.beginPath();
-            ctx.ellipse(cx, cy + 42 + wobble, 24, 10, 0, 0, Math.PI * 2);
-            ctx.stroke();
+                ctx.fillStyle = '#EF4444';
+                ctx.font = 'bold 14px Pretendard, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠️ 얼굴 미감지', cx, cy - 10);
+                ctx.font = '12px Pretendard, sans-serif';
+                ctx.fillStyle = '#FCA5A5';
+                ctx.fillText('중앙 원 안에 얼굴을 위치시켜 주세요', cx, cy + 15);
 
-            // 턱선 외곽선 (16점)
-            ctx.beginPath();
-            ctx.ellipse(cx, cy + wobble, rx, ry, 0, 0, Math.PI * 2);
-            ctx.stroke();
+            } else {
+                if (progress < 25) {
+                    if (stepText) stepText.textContent = '👤 안면 프레임 감지 및 조명 최적화 중...';
+                    if (confText) confText.textContent = `일치율: ${Math.round(progress * 1.5)}%`;
+                    if (badge) { badge.textContent = '얼굴 감지 중'; badge.style.background = '#1E3A8A'; }
+                } else if (progress < 60) {
+                    if (stepText) stepText.textContent = '🔍 68개 생체 랜드마크(눈, 코, 입, 턱선) 3D 분석 중...';
+                    if (confText) confText.textContent = `일치율: ${Math.round(35 + (progress - 25) * 1.1)}%`;
+                    if (badge) { badge.textContent = '생체 분석 중'; badge.style.background = '#065F46'; }
+                } else if (progress < 90) {
+                    if (stepText) stepText.textContent = '🧠 사용자 암호화 프로필 대조 및 인증 확인 중...';
+                    if (confText) confText.textContent = `일치율: ${Math.round(75 + (progress - 60) * 0.7)}%`;
+                    if (badge) { badge.textContent = '프로필 대조 중'; badge.style.background = '#6D28D9'; }
+                }
+
+                ctx.fillStyle = (progress >= 90) ? '#34D399' : '#38BDF8';
+                ctx.strokeStyle = (progress >= 90) ? 'rgba(52, 211, 153, 0.4)' : 'rgba(56, 189, 248, 0.3)';
+                ctx.lineWidth = 1;
+
+                const timePhase = Date.now() / 300;
+                const wobble = Math.sin(timePhase) * 2;
+
+                const leftEye = { x: cx - 35, y: cy - 25 + wobble };
+                const rightEye = { x: cx + 35, y: cy - 25 + wobble };
+                [leftEye, rightEye].forEach(eye => {
+                    for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+                        const px = eye.x + Math.cos(a) * 10;
+                        const py = eye.y + Math.sin(a) * 6;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 15 + wobble);
+                ctx.lineTo(cx, cy + 10 + wobble);
+                ctx.lineTo(cx - 12, cy + 18 + wobble);
+                ctx.lineTo(cx + 12, cy + 18 + wobble);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.ellipse(cx, cy + 42 + wobble, 24, 10, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.ellipse(cx, cy + wobble, rx, ry, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
 
             if (progress < 100) {
                 this.animId = requestAnimationFrame(loop);
             } else {
-                // 스캔 완료 -> 서버 매칭 호출
                 this.finishRecognition();
             }
         };
@@ -3565,6 +3712,9 @@ function startNavigation(destName, ttsMessage) {
     }
 
     BleController.sendPacket(`CMD:START:DEST=${destName}`);
+    if (typeof LeashController !== 'undefined') {
+        LeashController.triggerHaptic('forward');
+    }
     RealMapManager.loadRoute(destName);
     
     // 어르신 모드일 때만 음성 안내 출력
@@ -3661,8 +3811,11 @@ function switchMode(targetMode) {
     if (seniorView) seniorView.style.display = 'none';
     if (generalView) generalView.style.display = 'none';
 
+    const theme = localStorage.getItem('robodog_theme') || 'white';
     if (targetMode === 'senior') {
-        document.body.className = 'mode-senior';
+        document.body.classList.remove('mode-general', 'mode-guardian');
+        document.body.classList.add('mode-senior');
+        if (theme === 'white') document.body.classList.add('theme-white');
         if (btnSenior) btnSenior.classList.add('active');
         if (seniorView) seniorView.style.display = 'flex';
 
@@ -3671,7 +3824,9 @@ function switchMode(targetMode) {
         VoiceEngine.speak(`노인 안심 모드로 전환되었습니다. ${activeName}, 어디로 모실까요?`, false);
 
     } else if (targetMode === 'general') {
-        document.body.className = 'mode-general';
+        document.body.classList.remove('mode-senior', 'mode-guardian');
+        document.body.classList.add('mode-general');
+        if (theme === 'white') document.body.classList.add('theme-white');
         if (btnGeneral) btnGeneral.classList.add('active');
         if (generalView) generalView.style.display = 'flex';
 
@@ -3876,9 +4031,11 @@ document.addEventListener('DOMContentLoaded', () => {
             logEvent('[ERROR]', `설정 로드 실패: ${err.message}`, 'error');
         });
 
-    // 11. 지도, 회원 인증 매니저, 로봇개 BLE, 내 집 주소 매니저, 실시간 검색 자동완성, 캔버스, 신호등, AI 돌봄 엔진, 전체 장소 모달, Face ID 모달 초기화
+    // 11. 모듈 초기화 (회원 인증, 로보독 BLE, 스파이크 리드줄, 설정 매니저, 지도, 신호등 등)
     AuthManager.init();
     BleController.init();
+    LeashController.init();
+    SettingManager.init();
     HomeAddressManager.init();
     AutocompleteSearchManager.init();
     RealMapManager.init();

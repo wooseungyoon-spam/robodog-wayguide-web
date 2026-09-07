@@ -283,7 +283,7 @@ ROBODOG_BLE_STATE = {
 
 @app.route('/api/robodog/ble/status', methods=['GET', 'POST'])
 def robodog_ble_status():
-    """로봇개 블루투스 실시간 상태 및 텔레메트리 연동"""
+    """로보독 블루투스 실시간 상태 및 텔레메트리 연동"""
     global ROBODOG_BLE_STATE
     if request.method == 'POST':
         data = request.get_json() or {}
@@ -293,17 +293,54 @@ def robodog_ble_status():
 
 @app.route('/api/robodog/ble/command', methods=['POST'])
 def robodog_ble_command():
-    """로봇개 원격 조종 패킷 중계 API"""
+    """로보독 원격 조종 패킷 중계 API"""
     global ROBODOG_BLE_STATE
     data = request.get_json() or {}
     cmd = data.get('command', 'CMD:STOP').strip()
     ROBODOG_BLE_STATE['last_cmd'] = cmd
-    logger.info(f"[BLE-SERVER] 로봇개 제어 명령 중계: {cmd}")
+    logger.info(f"[BLE-SERVER] 로보독 제어 명령 중계: {cmd}")
     return jsonify({
         "status": "success",
         "command": cmd,
         "timestamp": time.time(),
         "echo": f"ACK:{cmd}"
+    }), 200
+
+# -------------------------------------------------------------
+# [신규] 🦮 스마트 햅틱 리드줄 (레고 스파이크 BLE) 텔레메트리 & 햅틱 연동
+# -------------------------------------------------------------
+ROBODOG_LEASH_STATE = {
+    "connected": False,
+    "device_name": "LEGO SPIKE Prime",
+    "battery": 88,
+    "rssi": -58,
+    "matrix_pattern": "READY",
+    "last_haptic": "NONE"
+}
+
+@app.route('/api/robodog/leash/status', methods=['GET', 'POST'])
+def robodog_leash_status():
+    """레고 스파이크 리드줄 상태 조회 및 동기화"""
+    global ROBODOG_LEASH_STATE
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        ROBODOG_LEASH_STATE.update(data)
+        logger.info(f"[LEASH] 리드줄 상태 동기화: {ROBODOG_LEASH_STATE}")
+        return jsonify({"status": "success", "leash": ROBODOG_LEASH_STATE}), 200
+    return jsonify({"status": "success", "leash": ROBODOG_LEASH_STATE}), 200
+
+@app.route('/api/robodog/leash/haptic', methods=['POST'])
+def robodog_leash_haptic():
+    """리드줄 모터 햅틱 텐션/진동 제어 명령 중계 API"""
+    global ROBODOG_LEASH_STATE
+    data = request.get_json() or {}
+    signal_type = data.get('type', 'forward')  # forward, left, right, stop
+    ROBODOG_LEASH_STATE['last_haptic'] = signal_type
+    logger.info(f"[LEASH-HAPTIC] 리드줄 햅틱 신호 전송: {signal_type}")
+    return jsonify({
+        "status": "success",
+        "command": signal_type,
+        "timestamp": time.time()
     }), 200
 
 @app.route('/api/auth/profiles', methods=['GET'])

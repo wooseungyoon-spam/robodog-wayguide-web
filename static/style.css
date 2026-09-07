@@ -2820,7 +2820,7 @@ body.mode-guardian .btn-mode.active {
 }
 
 /* =========================================================
-   [신규] BLE 로봇개 헤더 버튼 & 상태 배지
+   [신규] BLE 로보독 헤더 버튼 & 상태 배지
    ========================================================= */
 .btn-ble-header {
     display: inline-flex;
@@ -2873,7 +2873,84 @@ body.mode-guardian .btn-mode.active {
     background: rgba(34, 197, 94, 0.25);
     color: #86EFAC;
     border: 1px solid rgba(34, 197, 94, 0.5);
+/* =========================================================
+   [신규] 스마트 햅틱 리드줄 (레고 스파이크 BLE) 헤더 버튼
+   ========================================================= */
+.btn-leash-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 9999px;
+    padding: 6px 13px;
+    color: #A7F3D0;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+.btn-leash-header:hover {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: #34D399;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+.leash-icon {
+    font-size: 15px;
+}
+.leash-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    letter-spacing: 0.4px;
+}
+.leash-badge.badge-off {
+    background: rgba(239, 68, 68, 0.2);
+    color: #FCA5A5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.leash-badge.badge-connecting {
+    background: rgba(234, 179, 8, 0.2);
+    color: #FDE047;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    animation: badge-blink 1s infinite alternate;
+}
+.leash-badge.badge-on {
+    background: rgba(34, 197, 94, 0.25);
+    color: #86EFAC;
+    border: 1px solid rgba(34, 197, 94, 0.5);
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+/* =========================================================
+   [신규] 헤더 직관적 설정 버튼 (#btnOpenUserSetting)
+   ========================================================= */
+.btn-setting-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(148, 163, 184, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    color: #E2E8F0;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+.btn-setting-header:hover {
+    background: rgba(148, 163, 184, 0.28);
+    border-color: #94A3B8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(148, 163, 184, 0.2);
+}
+.setting-icon {
+    font-size: 14px;
 }
 
 /* =========================================================
@@ -3064,7 +3141,7 @@ body.mode-guardian .btn-mode.active {
 }
 
 /* =========================================================
-   [신규] BLE 로봇개 관제 모달 스타일 (#bluetoothModal)
+   [신규] BLE 로보독 관제 모달 스타일 (#bluetoothModal)
    ========================================================= */
 .ble-modal-card {
     max-width: 640px;
@@ -3369,5 +3446,567 @@ body.mode-guardian .btn-mode.active {
     .btn-ble-header .ble-text { display: none; }
 }
 
+/* =========================================================
+   [신규] 🦮 스마트 햅틱 리드줄 (레고 스파이크) 모달 스타일 (#leashModal)
+   ========================================================= */
+.leash-modal-card {
+    max-width: 680px;
+    width: 95%;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #0A0F1D;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 22px;
+    padding: 24px;
+    color: #F8FAFC;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 45px rgba(16, 185, 129, 0.15);
+}
 
+.spike-interactive-panel {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 16px;
+    margin: 16px 0;
+}
 
+@media (max-width: 600px) {
+    .spike-interactive-panel {
+        grid-template-columns: 1fr;
+    }
+}
+
+.spike-matrix-box, .spike-haptic-box {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-section-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #38BDF8;
+    margin-bottom: 12px;
+}
+
+.matrix-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+}
+
+.spike-matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 7px;
+    width: 170px;
+    height: 170px;
+    background: #020617;
+    padding: 12px;
+    border-radius: 16px;
+    border: 2px solid #334155;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.6);
+}
+
+.led-pixel {
+    width: 100%;
+    height: 100%;
+    background: #1E293B;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.led-pixel.on-yellow {
+    background: #FACC15;
+    box-shadow: 0 0 12px #FACC15, 0 0 4px #FEF08A;
+}
+
+.led-pixel.on-green {
+    background: #10B981;
+    box-shadow: 0 0 12px #10B981, 0 0 4px #6EE7B7;
+}
+
+.led-pixel.on-red {
+    background: #EF4444;
+    box-shadow: 0 0 14px #EF4444, 0 0 5px #FCA5A5;
+}
+
+.led-pixel.on-cyan {
+    background: #06B6D4;
+    box-shadow: 0 0 12px #06B6D4, 0 0 4px #67E8F9;
+}
+
+.matrix-status-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+.matrix-state-tag { color: #94A3B8; font-weight: 700; }
+.matrix-symbol-val { color: #F59E0B; font-weight: 800; }
+
+.haptic-desc {
+    font-size: 12px;
+    color: #94A3B8;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.haptic-buttons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    flex: 1;
+}
+
+.btn-haptic-test {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #F8FAFC;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-haptic-test:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.btn-haptic-test:active {
+    transform: scale(0.96);
+}
+
+.btn-haptic-fwd:hover { border-color: #38BDF8; background: rgba(56, 189, 248, 0.15); }
+.btn-haptic-left:hover { border-color: #A855F7; background: rgba(168, 85, 247, 0.15); }
+.btn-haptic-right:hover { border-color: #10B981; background: rgba(16, 185, 129, 0.15); }
+.btn-haptic-stop { border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); }
+.btn-haptic-stop:hover { border-color: #EF4444; background: rgba(239, 68, 68, 0.25); }
+
+.haptic-btn-icon { font-size: 20px; }
+.haptic-btn-txt { display: flex; flex-direction: column; }
+.haptic-main { font-size: 12px; font-weight: 800; color: #F8FAFC; }
+.haptic-sub { font-size: 10px; color: #94A3B8; }
+
+/* =========================================================
+   [신규] ⚙️ 직관적 환경 설정 모달 스타일 (#userSettingModal)
+   ========================================================= */
+.setting-modal-card {
+    max-width: 620px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #FFFFFF;
+    color: #0F172A;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    border: 1px solid #E2E8F0;
+}
+
+.setting-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 14px;
+}
+
+.setting-section {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setting-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1E293B;
+}
+
+.setting-notice-box {
+    background: #EFF6FF;
+    border-left: 4px solid #3B82F6;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1E40AF;
+    line-height: 1.5;
+}
+
+.setting-field-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #FFFFFF;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 6px 12px;
+}
+.unit-prefix, .unit-suffix {
+    font-size: 14px;
+    font-weight: 800;
+    color: #475569;
+}
+.input-with-unit input {
+    width: 60px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    font-weight: 900;
+    color: #0F172A;
+    text-align: center;
+    background: transparent;
+}
+
+.setting-age-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.btn-chip-age {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-chip-age:hover {
+    background: #EFF6FF;
+    border-color: #3B82F6;
+    color: #1D4ED8;
+}
+
+.setting-status-badge {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 8px;
+    width: fit-content;
+}
+.setting-status-badge.under {
+    background: #FEF3C7;
+    color: #B45309;
+    border: 1px solid #FCD34D;
+}
+.setting-status-badge.over {
+    background: #DCFCE7;
+    color: #15803D;
+    border: 1px solid #86EFAC;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.form-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+}
+.form-input {
+    background: #FFFFFF;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: #0F172A;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+.form-input:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.form-row-half {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+@media (max-width: 500px) {
+    .form-row-half { grid-template-columns: 1fr; }
+}
+
+.theme-select-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.btn-theme-select {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #FFFFFF;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+.btn-theme-select:hover {
+    border-color: #94A3B8;
+}
+.btn-theme-select.active {
+    border-color: #2563EB;
+    background: #EFF6FF;
+}
+.theme-icon { font-size: 24px; }
+.theme-txt { display: flex; flex-direction: column; }
+.theme-main { font-size: 13px; font-weight: 800; color: #0F172A; }
+.theme-desc { font-size: 11px; color: #64748B; }
+
+.setting-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 10px;
+}
+.btn-setting-cancel {
+    background: #F1F5F9;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+}
+.btn-setting-cancel:hover { background: #E2E8F0; }
+.btn-setting-save {
+    background: #2563EB;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #FFFFFF;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+.btn-setting-save:hover {
+    background: #1D4ED8;
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   [신규] 화이트 모드 (White / Light Mode) 테마 종합 오버라이드
+   ========================================================= */
+body.theme-white,
+body.theme-white.mode-general {
+    background-color: #F8FAFC !important;
+    color: #0F172A !important;
+}
+
+body.theme-white .app-header {
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-white .brand-title {
+    color: #1E40AF !important;
+}
+
+body.theme-white .brand-sub {
+    color: #64748B !important;
+}
+
+body.theme-white .btn-ble-header {
+    background: #EFF6FF !important;
+    border: 1px solid #BFDBFE !important;
+    color: #1E40AF !important;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1) !important;
+}
+body.theme-white .btn-ble-header:hover {
+    background: #DBEAFE !important;
+    border-color: #93C5FD !important;
+}
+
+body.theme-white .btn-leash-header {
+    background: #F0FDF4 !important;
+    border: 1px solid #BBF7D0 !important;
+    color: #166534 !important;
+    box-shadow: 0 1px 3px rgba(22, 101, 52, 0.1) !important;
+}
+body.theme-white .btn-leash-header:hover {
+    background: #DCFCE7 !important;
+    border-color: #86EFAC !important;
+}
+
+body.theme-white .btn-setting-header {
+    background: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #334155 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+body.theme-white .btn-setting-header:hover {
+    background: #F1F5F9 !important;
+    border-color: #94A3B8 !important;
+}
+
+body.theme-white .btn-faceid-header {
+    background: #EEF2FF !important;
+    border: 1px solid #C7D2FE !important;
+    color: #3730A3 !important;
+    box-shadow: 0 1px 3px rgba(55, 48, 163, 0.1) !important;
+}
+body.theme-white .btn-faceid-header:hover {
+    background: #E0E7FF !important;
+    border-color: #A5B4FC !important;
+}
+
+body.theme-white .btn-narrator {
+    background: #ECFDF5 !important;
+    border: 1px solid #A7F3D0 !important;
+    color: #065F46 !important;
+    box-shadow: 0 1px 3px rgba(6, 95, 70, 0.1) !important;
+}
+body.theme-white .btn-narrator:hover {
+    background: #D1FAE5 !important;
+}
+body.theme-white .btn-narrator.muted {
+    background: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+    color: #64748B !important;
+}
+
+body.theme-white .btn-age-chip {
+    background: #FFFBEB !important;
+    border: 1px solid #FDE68A !important;
+    color: #92400E !important;
+    box-shadow: 0 1px 3px rgba(146, 64, 14, 0.1) !important;
+}
+body.theme-white .btn-age-chip:hover {
+    background: #FEF3C7 !important;
+}
+
+body.theme-white .btn-auth-header {
+    background: #F1F5F9 !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #1E293B !important;
+}
+body.theme-white .btn-auth-header:hover {
+    background: #E2E8F0 !important;
+}
+
+body.theme-white .mode-switcher-container {
+    background: #F1F5F9 !important;
+    border: 1px solid #E2E8F0 !important;
+}
+body.theme-white .btn-mode {
+    color: #64748B !important;
+}
+body.theme-white .btn-mode.active {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* White Mode Cards & Containers */
+body.theme-white .start-location-card,
+body.theme-white .control-panel-card,
+body.theme-white .map-view-card,
+body.theme-white .realtime-status-card,
+body.theme-white .turn-by-turn-card,
+body.theme-white .stats-summary-card,
+body.theme-white .ai-care-card,
+body.theme-white .signal-hud-card {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03) !important;
+    color: #0F172A !important;
+}
+
+body.theme-white .start-title,
+body.theme-white .panel-title,
+body.theme-white .card-title,
+body.theme-white .hud-value,
+body.theme-white .turn-title,
+body.theme-white .stat-value,
+body.theme-white .dest-name {
+    color: #0F172A !important;
+}
+
+body.theme-white .start-sub,
+body.theme-white .panel-sub,
+body.theme-white .hud-label,
+body.theme-white .stat-label,
+body.theme-white .dest-desc {
+    color: #64748B !important;
+}
+
+body.theme-white .input-with-icon {
+    background: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+}
+body.theme-white .input-with-icon input {
+    color: #0F172A !important;
+}
+body.theme-white .input-with-icon:focus-within {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+body.theme-white .home-chip {
+    background: #F1F5F9 !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #334155 !important;
+}
+body.theme-white .home-chip:hover {
+    background: #E2E8F0 !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+}
+
+body.theme-white .start-card-tip {
+    background: #F0FDF4 !important;
+    border: 1px solid #BBF7D0 !important;
+    color: #166534 !important;
+}
+
+body.theme-white .quick-profile-card {
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #0F172A !important;
+}
+body.theme-white .quick-profile-card:hover {
+    background: #EFF6FF !important;
+    border-color: #93C5FD !important;
+}
+body.theme-white .qp-name {
+    color: #0F172A !important;
+}
+body.theme-white .qp-addr {
+    color: #64748B !important;
+}
