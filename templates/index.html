@@ -19,7 +19,7 @@
     {% endif %}
 
     <!-- Local CSS with cache-busting -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=9.0_clean_settings">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=10.0_compact_modal">
 
     <!-- [안심 보장] ☀️ 완벽한 화이트 모드 및 헤더 버튼 UI 완벽 최적화 스타일 (캐시 무관 즉시 적용) -->
     <style>
@@ -442,203 +442,150 @@
             background: #F1F5F9 !important;
         }
     
+        
         /* =========================================================
-           5. 모달 (나이 설정 모달 & 환경 설정 모달) 완벽한 화이트 UI
+           [v10.0] 컴팩트 플로팅 설정창 & 부드러운 라운드 인풋 & 상단 X 버튼
            ========================================================= */
         .modal-overlay {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
             background: rgba(15, 23, 42, 0.55) !important;
-            backdrop-filter: blur(6px) !important;
+            backdrop-filter: blur(8px) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 9999 !important;
+            padding: 16px !important;
+            box-sizing: border-box !important;
         }
 
-        .age-modal-card,
-        .setting-modal-card {
+        /* 설정창이 화면을 꽉 채우지 않도록 최적의 컴팩트 크기 지정 (최대 520px, 화면 높이의 85%) */
+        .setting-modal-card,
+        .age-modal-card {
+            width: 100% !important;
+            max-width: 520px !important;
+            max-height: 85vh !important;
             background: #FFFFFF !important;
             border: 1px solid #E2E8F0 !important;
-            border-radius: 20px !important;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
             color: #0F172A !important;
-            padding: 24px !important;
-            max-width: 540px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+            position: relative !important;
+            margin: auto !important;
+            animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
 
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96) translateY(8px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* 모달 상단 헤더 & 오른쪽 상단 닫기(X) 버튼 */
         .modal-header {
+            padding: 18px 22px 14px !important;
+            background: #FFFFFF !important;
             border-bottom: 1px solid #F1F5F9 !important;
-            padding-bottom: 14px !important;
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
+            position: relative !important;
+            flex-shrink: 0 !important;
+        }
+
+        .modal-title-group {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+
+        .modal-title-group .modal-icon {
+            font-size: 24px !important;
         }
 
         .modal-header h2 {
-            color: #0F172A !important;
-            font-size: 20px !important;
+            font-size: 18px !important;
             font-weight: 800 !important;
+            color: #0F172A !important;
+            margin: 0 !important;
+            line-height: 1.2 !important;
         }
 
         .modal-subtitle {
+            font-size: 12px !important;
             color: #64748B !important;
-            font-size: 13px !important;
+            margin-top: 3px !important;
+            display: block !important;
         }
 
-        .btn-close {
-            background: #F1F5F9 !important;
-            color: #64748B !important;
+        /* 우측 상단 명확하고 직관적인 원형 X 닫기 버튼 */
+        .btn-close,
+        #btnCloseUserSettingModal,
+        #btnCloseAgeModal {
+            position: absolute !important;
+            top: 16px !important;
+            right: 18px !important;
+            width: 36px !important;
+            height: 36px !important;
             border-radius: 50% !important;
-            width: 32px !important;
-            height: 32px !important;
-            display: inline-flex !important;
+            background: #F1F5F9 !important;
+            border: 1px solid #E2E8F0 !important;
+            color: #64748B !important;
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            border: none !important;
-            cursor: pointer !important;
-            font-size: 20px !important;
-        }
-        .btn-close:hover {
-            background: #E2E8F0 !important;
-            color: #0F172A !important;
+            transition: all 0.2s ease !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+            z-index: 10 !important;
         }
 
-        .age-rule-notice,
-        .setting-notice-box {
-            background: #F0FDF4 !important;
-            border: 1px solid #BBF7D0 !important;
-            border-radius: 12px !important;
-            color: #166534 !important;
-            padding: 14px 16px !important;
-            font-size: 13px !important;
-            line-height: 1.6 !important;
-            margin: 14px 0 !important;
+        .btn-close:hover,
+        #btnCloseUserSettingModal:hover,
+        #btnCloseAgeModal:hover {
+            background: #FEE2E2 !important;
+            border-color: #FECACA !important;
+            color: #DC2626 !important;
+            transform: rotate(90deg) !important;
         }
 
-        .current-age-badge-row {
-            display: flex !important;
-            align-items: center !important;
-            gap: 10px !important;
-            margin-bottom: 16px !important;
+        /* 스크롤 가능한 본문 영역 */
+        .setting-modal-body,
+        .age-modal-body {
+            padding: 18px 22px !important;
+            overflow-y: auto !important;
+            max-height: calc(85vh - 140px) !important;
+            box-sizing: border-box !important;
         }
-        .badge-label {
-            font-size: 14px !important;
-            font-weight: 700 !important;
-            color: #334155 !important;
+        .setting-modal-body::-webkit-scrollbar {
+            width: 6px !important;
         }
-        .age-badge-highlight {
-            background: #FFFBEB !important;
-            border: 1.5px solid #FDE68A !important;
-            color: #B45309 !important;
-            font-weight: 800 !important;
-            padding: 6px 14px !important;
+        .setting-modal-body::-webkit-scrollbar-thumb {
+            background: #CBD5E1 !important;
             border-radius: 9999px !important;
-            font-size: 13px !important;
         }
 
-        .presets-title {
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            color: #64748B !important;
-            margin-bottom: 8px !important;
-        }
-
-        .presets-grid {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 8px !important;
-            margin-bottom: 16px !important;
-        }
-
-        .btn-age-preset,
-        .btn-chip-age {
-            background: #F8FAFC !important;
-            border: 1.5px solid #E2E8F0 !important;
-            border-radius: 12px !important;
-            padding: 10px 14px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: space-between !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            color: #1E293B !important;
-            cursor: pointer !important;
-            transition: all 0.15s ease !important;
-        }
-        .btn-age-preset:hover,
-        .btn-chip-age:hover {
-            background: #EFF6FF !important;
-            border-color: #93C5FD !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1) !important;
-        }
-
-        .preset-tag.under {
-            background: #FEF3C7 !important;
-            color: #92400E !important;
-            padding: 2px 7px !important;
-            border-radius: 6px !important;
-            font-size: 11px !important;
-        }
-        .preset-tag.over {
-            background: #DCFCE7 !important;
-            color: #15803D !important;
-            padding: 2px 7px !important;
-            border-radius: 6px !important;
-            font-size: 11px !important;
-        }
-
-        .age-custom-input-row {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: space-between !important;
-            background: #F8FAFC !important;
-            border: 1.5px solid #E2E8F0 !important;
-            border-radius: 12px !important;
-            padding: 10px 16px !important;
-        }
-        .age-custom-input-row label {
-            font-size: 14px !important;
-            font-weight: 700 !important;
-            color: #334155 !important;
-        }
-        .custom-input-wrap {
-            display: flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-        }
-        .custom-input-wrap input {
-            width: 70px !important;
-            height: 38px !important;
-            text-align: center !important;
-            font-size: 16px !important;
-            font-weight: 800 !important;
-            background: #FFFFFF !important;
-            border: 1.5px solid #CBD5E1 !important;
-            border-radius: 8px !important;
-            color: #0F172A !important;
-        }
-        .btn-apply-age {
-            background: #2563EB !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 8px !important;
-            height: 38px !important;
-            padding: 0 16px !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            cursor: pointer !important;
-            transition: background 0.15s !important;
-        }
-        .btn-apply-age:hover {
-            background: #1D4ED8 !important;
-        }
-
-        /* 설정 모달 내 섹션 및 폼 요소 스타일 */
+        /* =========================================================
+           부드럽고 모던한 인풋 & 폼 컨트롤 (딱딱한 검정 테두리 박스 완전 제거)
+           ========================================================= */
         .setting-section {
             margin-bottom: 20px !important;
-            padding-bottom: 16px !important;
+            padding-bottom: 18px !important;
             border-bottom: 1px solid #F1F5F9 !important;
         }
         .setting-section:last-child {
             border-bottom: none !important;
             margin-bottom: 0 !important;
         }
+
         .setting-section-header {
             display: flex !important;
             align-items: center !important;
@@ -646,22 +593,167 @@
             margin-bottom: 12px !important;
         }
         .ssh-title {
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            color: #1E293B !important;
+        }
+
+        .setting-notice-box {
+            background: #F0FDF4 !important;
+            border: 1px solid #BBF7D0 !important;
+            border-radius: 12px !important;
+            color: #166534 !important;
+            padding: 12px 14px !important;
+            font-size: 12px !important;
+            line-height: 1.5 !important;
+            margin-bottom: 12px !important;
+        }
+
+        /* 1. 나이 입력창 & 가로 정렬 알약 칩 */
+        .setting-field-row {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            flex-wrap: wrap !important;
+            margin-bottom: 10px !important;
+        }
+
+        .input-with-unit {
+            display: inline-flex !important;
+            align-items: center !important;
+            background: #F8FAFC !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 12px !important;
+            padding: 0 12px !important;
+            height: 40px !important;
+            box-sizing: border-box !important;
+        }
+        .input-with-unit .unit-prefix,
+        .input-with-unit .unit-suffix {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            color: #64748B !important;
+        }
+        .input-with-unit input {
+            width: 48px !important;
+            border: none !important;
+            background: transparent !important;
+            text-align: center !important;
             font-size: 15px !important;
             font-weight: 800 !important;
+            outline: none !important;
             color: #0F172A !important;
+        }
+
+        .setting-age-chips {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+            align-items: center !important;
+        }
+
+        .btn-chip-age {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 36px !important;
+            padding: 0 13px !important;
+            border-radius: 9999px !important;
+            background: #F1F5F9 !important;
+            border: 1.5px solid #E2E8F0 !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            color: #334155 !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+            transition: all 0.15s ease !important;
+        }
+        .btn-chip-age:hover {
+            background: #EFF6FF !important;
+            border-color: #93C5FD !important;
+            color: #1E40AF !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .setting-status-badge {
+            display: inline-block !important;
+            padding: 6px 12px !important;
+            border-radius: 8px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            margin-top: 4px !important;
+        }
+        .setting-status-badge.under {
+            background: #FEF3C7 !important;
+            color: #92400E !important;
+            border: 1px solid #FDE68A !important;
+        }
+        .setting-status-badge.over {
+            background: #DCFCE7 !important;
+            color: #15803D !important;
+            border: 1px solid #86EFAC !important;
+        }
+
+        /* 2. 모든 텍스트 입력창 (성함, 주소, 보호자 연락처) - 부드러운 라운드 필드 */
+        .form-group {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+            margin-bottom: 12px !important;
+            width: 100% !important;
+        }
+        .form-label {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            color: #334155 !important;
+            margin: 0 !important;
+        }
+        .form-input {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            height: 42px !important;
+            padding: 0 14px !important;
+            background: #F8FAFC !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 12px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            color: #0F172A !important;
+            outline: none !important;
+            transition: all 0.15s ease !important;
+        }
+        .form-input:focus {
+            background: #FFFFFF !important;
+            border-color: #2563EB !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+        }
+
+        .form-row-half {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
+            width: 100% !important;
+        }
+
+        /* 3. 내레이터 음성 & 테마 선택 카드 버튼 */
+        .theme-select-row {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
         }
         .btn-theme-select {
             background: #F8FAFC !important;
             border: 1.5px solid #E2E8F0 !important;
-            border-radius: 12px !important;
-            padding: 12px 16px !important;
+            border-radius: 14px !important;
+            padding: 12px 14px !important;
             cursor: pointer !important;
             display: flex !important;
             align-items: center !important;
-            gap: 12px !important;
-            flex: 1 !important;
+            gap: 10px !important;
             transition: all 0.15s ease !important;
             text-align: left !important;
+            box-sizing: border-box !important;
         }
         .btn-theme-select:hover {
             border-color: #93C5FD !important;
@@ -670,42 +762,59 @@
         .btn-theme-select.active {
             border-color: #2563EB !important;
             background: #EFF6FF !important;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
         }
         .theme-main {
-            font-size: 14px !important;
+            font-size: 13px !important;
             font-weight: 800 !important;
             color: #0F172A !important;
             display: block !important;
         }
         .theme-desc {
-            font-size: 12px !important;
+            font-size: 11px !important;
             color: #64748B !important;
             display: block !important;
             margin-top: 2px !important;
+            line-height: 1.3 !important;
+        }
+
+        /* 4. 모달 하단 푸터 액션 버튼 */
+        .setting-footer {
+            padding: 14px 22px !important;
+            background: #F8FAFC !important;
+            border-top: 1px solid #E2E8F0 !important;
+            display: flex !important;
+            gap: 10px !important;
+            justify-content: flex-end !important;
+            flex-shrink: 0 !important;
         }
         .btn-setting-save {
             background: #2563EB !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 10px !important;
-            padding: 12px 24px !important;
+            padding: 11px 20px !important;
             font-size: 14px !important;
             font-weight: 800 !important;
             cursor: pointer !important;
+            transition: background 0.15s ease !important;
         }
         .btn-setting-save:hover {
             background: #1D4ED8 !important;
         }
         .btn-setting-cancel {
-            background: #F1F5F9 !important;
+            background: #FFFFFF !important;
             color: #475569 !important;
-            border: 1px solid #CBD5E1 !important;
+            border: 1.5px solid #CBD5E1 !important;
             border-radius: 10px !important;
-            padding: 12px 20px !important;
+            padding: 11px 18px !important;
             font-size: 14px !important;
             font-weight: 700 !important;
             cursor: pointer !important;
+        }
+        .btn-setting-cancel:hover {
+            background: #F1F5F9 !important;
+            color: #0F172A !important;
         }
 
     </style>
@@ -2137,6 +2246,6 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=9.0_clean_settings"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=10.0_compact_modal"></script>
 </body>
 </html>

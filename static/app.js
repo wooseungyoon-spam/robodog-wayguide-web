@@ -841,6 +841,18 @@ const SettingManager = {
         if (btnCancel) btnCancel.addEventListener('click', () => this.closeModal());
         if (btnSave) btnSave.addEventListener('click', () => this.saveSettings());
 
+        // 배경(오버레이) 클릭 및 ESC 키로 설정창 닫기
+        if (this.modalEl) {
+            this.modalEl.addEventListener('click', (e) => {
+                if (e.target === this.modalEl) this.closeModal();
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modalEl && this.modalEl.style.display !== 'none') {
+                this.closeModal();
+            }
+        });
+
         // 만 나이 입력 시 실시간 상태 뱃지 업데이트
         const inputAge = document.getElementById('settingInputAge');
         if (inputAge) {
