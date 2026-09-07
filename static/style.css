@@ -16,12 +16,13 @@
     --senior-btn-red: #FF3D00;
     --senior-border-yellow: #FFE600;
 
-    /* 일반 모드 테마 (모던 클린 & 블루 액센트) */
-    --general-bg: #0F172A;
-    --general-card-bg: #1E293B;
-    --general-primary: #3B82F6;
-    --general-text: #F8FAFC;
-    --general-text-muted: #94A3B8;
+    /* 일반 모드 테마 (화이트 모드 기본) */
+    --general-bg: #F8FAFC;
+    --general-card-bg: #FFFFFF;
+    --general-primary: #2563EB;
+    --general-text: #0F172A;
+    --general-text-muted: #64748B;
+    --general-border: #E2E8F0;
     
     /* 보호자 관제 모드 테마 (다크 사이버네틱) */
     --guardian-bg: #0B0F19;
@@ -4009,4 +4010,345 @@ body.theme-white .qp-name {
 }
 body.theme-white .qp-addr {
     color: #64748B !important;
+}
+
+
+/* =========================================================
+   [화이트 모드 및 헤더 버튼 UI 완벽 최적화 - v6.0]
+   ========================================================= */
+
+/* 1. 글로벌 바디 & 헤더 화이트 모드 */
+body, body.theme-white, body.mode-general {
+    background-color: #F8FAFC !important;
+    color: #0F172A !important;
+}
+
+.app-header, body.mode-general .app-header, body.theme-white .app-header {
+    background-color: #FFFFFF !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+    padding: 10px 18px !important;
+}
+
+.brand-title, body.mode-general .brand-title, body.theme-white .brand-title {
+    color: #1E293B !important;
+    font-weight: 900 !important;
+}
+
+.brand-sub, body.mode-general .brand-sub, body.theme-white .brand-sub {
+    color: #64748B !important;
+}
+
+/* 2. 헤더 오른쪽 그룹 - 가로 스크롤 및 줄바꿈 완전 방지 */
+.header-right-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+}
+.header-right-group::-webkit-scrollbar {
+    display: none !important;
+}
+
+.header-auth-area {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+}
+
+/* 3. 헤더 내 모든 버튼 - 둥근 알약(Pill) 형태, 텍스트 줄바꿈 절대 방지 */
+.app-header button,
+.btn-ble-header,
+.btn-leash-header,
+.btn-faceid-header,
+.btn-narrator,
+.btn-setting-header,
+.btn-age-chip,
+.btn-auth-header,
+.btn-auth-logout,
+.btn-mode {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 38px !important;
+    padding: 0 13px !important;
+    border-radius: 9999px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
+}
+
+/* 4. 개별 헤더 버튼 파스텔 소프트 스타일 (화이트 모드) */
+/* 로보독 BLE */
+.btn-ble-header {
+    background: #F0FDF4 !important;
+    border: 1px solid #BBF7D0 !important;
+    color: #166534 !important;
+}
+.btn-ble-header:hover {
+    background: #DCFCE7 !important;
+    border-color: #86EFAC !important;
+    box-shadow: 0 2px 6px rgba(22, 101, 52, 0.1) !important;
+}
+.ble-badge {
+    border-radius: 12px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+.ble-badge.badge-off {
+    background: #FEE2E2 !important;
+    color: #991B1B !important;
+    border: 1px solid #FECACA !important;
+}
+.ble-badge.badge-on {
+    background: #DCFCE7 !important;
+    color: #15803D !important;
+    border: 1px solid #86EFAC !important;
+}
+
+/* 스마트 스파이크 리드줄 */
+.btn-leash-header {
+    background: #EFF6FF !important;
+    border: 1px solid #BFDBFE !important;
+    color: #1E40AF !important;
+}
+.btn-leash-header:hover {
+    background: #DBEAFE !important;
+    border-color: #93C5FD !important;
+    box-shadow: 0 2px 6px rgba(30, 64, 175, 0.1) !important;
+}
+.leash-badge {
+    border-radius: 12px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+.leash-badge.badge-off {
+    background: #FEE2E2 !important;
+    color: #991B1B !important;
+    border: 1px solid #FECACA !important;
+}
+.leash-badge.badge-on {
+    background: #DCFCE7 !important;
+    color: #15803D !important;
+    border: 1px solid #86EFAC !important;
+}
+
+/* Face ID */
+.btn-faceid-header {
+    background: #FAF5FF !important;
+    border: 1px solid #E9D5FF !important;
+    color: #6B21A8 !important;
+}
+.btn-faceid-header:hover {
+    background: #F3E8FF !important;
+    border-color: #D8B4FE !important;
+    box-shadow: 0 2px 6px rgba(107, 33, 168, 0.1) !important;
+}
+
+/* 음성 안내 (내레이터) */
+.btn-narrator {
+    background: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #334155 !important;
+}
+.btn-narrator:hover {
+    background: #F1F5F9 !important;
+    border-color: #94A3B8 !important;
+}
+.btn-narrator.muted {
+    background: #F1F5F9 !important;
+    border-color: #E2E8F0 !important;
+    color: #94A3B8 !important;
+}
+
+/* 통합 설정 버튼 */
+.btn-setting-header {
+    background: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #1E293B !important;
+}
+.btn-setting-header:hover {
+    background: #F1F5F9 !important;
+    border-color: #94A3B8 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 만 나이 표시 칩 */
+.btn-age-chip {
+    background: #FFFBEB !important;
+    border: 1px solid #FDE68A !important;
+    color: #92400E !important;
+}
+.btn-age-chip:hover {
+    background: #FEF3C7 !important;
+    border-color: #FCD34D !important;
+    box-shadow: 0 2px 6px rgba(146, 64, 14, 0.1) !important;
+}
+
+/* 로그인 버튼 */
+.btn-auth-header {
+    background: #2563EB !important;
+    border: 1px solid #1D4ED8 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
+}
+.btn-auth-header:hover {
+    background: #1D4ED8 !important;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* 로그아웃 버튼 */
+.btn-auth-logout {
+    background: #FEE2E2 !important;
+    border: 1px solid #FECACA !important;
+    color: #991B1B !important;
+}
+.btn-auth-logout:hover {
+    background: #FCA5A5 !important;
+}
+
+/* 모드 토글 스위처 */
+.mode-switcher-container {
+    background: #F1F5F9 !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 9999px !important;
+    padding: 3px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+}
+.btn-mode {
+    border: none !important;
+    background: transparent !important;
+    color: #64748B !important;
+    height: 32px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: 9999px !important;
+}
+.btn-mode.active {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 5. 메인 관제 지도 컨테이너 높이 및 렌더링 최적화 */
+.map-view-box {
+    width: 100% !important;
+    height: 420px !important;
+    min-height: 380px !important;
+    background: #F1F5F9 !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+#realMapContainer {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    z-index: 1 !important;
+    background: #E2E8F0 !important;
+}
+
+.leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+    font-family: var(--font-family) !important;
+}
+
+/* 6. 화이트 모드 카드, 패널, 텔레메트리 바 */
+.panel-card,
+.map-panel,
+.canvas-panel,
+.traffic-panel,
+.tuning-panel,
+.guardian-log-panel,
+.telemetry-bar,
+.gps-prompt-card {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    color: #0F172A !important;
+}
+
+.panel-title {
+    color: #0F172A !important;
+    font-weight: 800 !important;
+}
+
+.telem-label {
+    color: #64748B !important;
+}
+
+.telem-val {
+    color: #0F172A !important;
+    font-weight: 800 !important;
+}
+
+.quick-dest-item {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #0F172A !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02) !important;
+}
+.quick-dest-item:hover {
+    background: #EFF6FF !important;
+    border-color: #93C5FD !important;
+}
+
+.cat-pill {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #475569 !important;
+}
+.cat-pill.active {
+    background: #2563EB !important;
+    border-color: #2563EB !important;
+    color: #FFFFFF !important;
+}
+
+.mode-chip {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #475569 !important;
+}
+.mode-chip.active {
+    background: #EFF6FF !important;
+    border-color: #3B82F6 !important;
+    color: #1D4ED8 !important;
+}
+
+/* 7. 모달 화이트 테마 */
+.modal-card {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.form-input {
+    background: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #0F172A !important;
+}
+.form-input:focus {
+    border-color: #2563EB !important;
+    background: #FFFFFF !important;
 }

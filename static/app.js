@@ -490,6 +490,546 @@ const BleController = {
     }
 };
 
+
+// ---------------------------------------------------------
+// 2-1. [신규] 🦮 스마트 햅틱 리드줄 (레고 스파이크 BLE) 관제기
+// ---------------------------------------------------------
+const LeashController = {
+    modalEl: null,
+    terminalEl: null,
+    matrixEl: null,
+    device: null,
+    server: null,
+    char: null,
+    isConnected: false,
+    isMock: false,
+    audioCtx: null,
+
+    init() {
+        this.modalEl = document.getElementById('leashModal');
+        this.terminalEl = document.getElementById('leashTerminalOutput');
+        this.matrixEl = document.getElementById('spikeLedMatrix');
+
+        // 25개 LED 픽셀 동적 생성
+        if (this.matrixEl) {
+            this.matrixEl.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const px = document.createElement('div');
+                px.className = 'led-pixel';
+                px.id = `ledPx_${i}`;
+                this.matrixEl.appendChild(px);
+            }
+            this.renderMatrixPattern('READY');
+        }
+
+        // 헤더 및 모달 버튼 바인딩
+        const btnHeader = document.getElementById('btnHeaderLeash');
+        const btnClose = document.getElementById('btnCloseLeashModal');
+        if (btnHeader) btnHeader.addEventListener('click', () => this.openModal());
+        if (btnClose) btnClose.addEventListener('click', () => this.closeModal());
+
+        const btnPairReal = document.getElementById('btnLeashPairReal');
+        const btnPairVirt = document.getElementById('btnLeashPairVirtual');
+        const btnDisconn = document.getElementById('btnLeashDisconnect');
+        const btnClearLog = document.getElementById('btnClearLeashLog');
+
+        if (btnPairReal) btnPairReal.addEventListener('click', () => this.connectReal());
+        if (btnPairVirt) btnPairVirt.addEventListener('click', () => this.enableMockMode());
+        if (btnDisconn) btnDisconn.addEventListener('click', () => this.disconnect());
+        if (btnClearLog && this.terminalEl) {
+            btnClearLog.addEventListener('click', () => {
+                this.terminalEl.innerHTML = '<div class="term-line info">[SYS] 리드줄 로그 콘솔 초기화됨.</div>';
+            });
+        }
+
+        // 햅틱 수동 테스트 버튼 바인딩
+        const btnFwd = document.getElementById('btnHapticForward');
+        const btnLeft = document.getElementById('btnHapticLeft');
+        const btnRight = document.getElementById('btnHapticRight');
+        const btnStop = document.getElementById('btnHapticStop');
+
+        if (btnFwd) btnFwd.addEventListener('click', () => this.triggerHaptic('forward'));
+        if (btnLeft) btnLeft.addEventListener('click', () => this.triggerHaptic('left'));
+        if (btnRight) btnRight.addEventListener('click', () => this.triggerHaptic('right'));
+        if (btnStop) btnStop.addEventListener('click', () => this.triggerHaptic('stop'));
+    },
+
+    openModal() {
+        if (!this.modalEl) this.modalEl = document.getElementById('leashModal');
+        if (this.modalEl) this.modalEl.style.display = 'flex';
+    },
+
+    closeModal() {
+        if (this.modalEl) this.modalEl.style.display = 'none';
+    },
+
+    logTerminal(msg, type = 'info') {
+        if (!this.terminalEl) return;
+        const line = document.createElement('div');
+        line.className = `term-line ${type}`;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        this.terminalEl.appendChild(line);
+        this.terminalEl.scrollTop = this.terminalEl.scrollHeight;
+    },
+
+    async connectReal() {
+        if (!navigator.bluetooth) {
+            alert('이 브라우저는 Web Bluetooth API를 지원하지 않습니다.\n대신 [가상 스파이크 리드줄 시뮬레이터]를 연결합니다.');
+            this.enableMockMode();
+            return;
+        }
+
+        try {
+            this.logTerminal('🔍 주변 레고 스파이크(LEGO SPIKE Prime) BLE 기기 검색 중...', 'info');
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [
+                    { namePrefix: 'LEGO' },
+                    { namePrefix: 'SPIKE' },
+                    { namePrefix: 'Hub' }
+                ],
+                optionalServices: [
+                    '00001623-1212-efde-1623-785feabcd123',
+                    '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+                    'battery_service'
+                ]
+            });
+
+            const server = await device.gatt.connect();
+            this.device = device;
+            this.server = server;
+            this.isConnected = true;
+            this.isMock = false;
+
+            const devName = device.name || 'LEGO SPIKE Hub';
+            this.updateUiState(true, devName);
+            this.logTerminal(`🎉 [성공] 레고 스파이크 리드줄 [${devName}] BLE 페어링 완료!`, 'tx');
+            logEvent('[LEASH]', `🎉 레고 스파이크 [${devName}] 블루투스 연결 완료!`, 'success');
+            VoiceEngine.speak('스마트 햅틱 리드줄과 블루투스로 연결되었습니다.');
+
+            fetch('/api/robodog/leash/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ connected: true, device_name: devName, battery: 88 })
+            }).catch(() => {});
+
+        } catch (err) {
+            if (err.name === 'NotFoundError') {
+                this.logTerminal('블루투스 검색 창이 취소되었습니다.', 'warn');
+            } else {
+                this.logTerminal(`BLE 연결 예외 (${err.message}) -> [가상 리드줄 시뮬레이터] 가동`, 'err');
+                this.enableMockMode();
+            }
+        }
+    },
+
+    enableMockMode() {
+        this.isConnected = true;
+        this.isMock = true;
+        const mockName = 'SPIKE-Prime-Virtual';
+
+        this.updateUiState(true, mockName);
+        this.logTerminal(`🦮 [가상 모드] ${mockName} 시뮬레이터 가동 완료.`, 'info');
+        logEvent('[LEASH]', '가상 레고 스파이크 리드줄 시뮬레이터 연결 완료.', 'success');
+        VoiceEngine.speak('가상 스파이크 리드줄 시뮬레이터와 연결되었습니다.');
+
+        fetch('/api/robodog/leash/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connected: true, device_name: mockName, battery: 92 })
+        }).catch(() => {});
+    },
+
+    disconnect() {
+        if (this.device && this.device.gatt && this.device.gatt.connected) {
+            this.device.gatt.disconnect();
+        }
+        this.isConnected = false;
+        this.isMock = false;
+        this.updateUiState(false, '미연결');
+        this.logTerminal('레고 스파이크 리드줄 연결이 해제되었습니다.', 'warn');
+        logEvent('[LEASH]', '스파이크 리드줄 연결이 해제되었습니다.', 'warn');
+        VoiceEngine.speak('스파이크 리드줄 연결이 해제되었습니다.');
+
+        fetch('/api/robodog/leash/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connected: false, device_name: 'None' })
+        }).catch(() => {});
+    },
+
+    updateUiState(connected, devName = '미연결') {
+        const hBadge = document.getElementById('leashHeaderBadge');
+        if (hBadge) {
+            hBadge.className = `leash-badge ${connected ? 'badge-on' : 'badge-off'}`;
+            hBadge.textContent = connected ? (this.isMock ? 'SIM' : 'ON') : '연결안됨';
+        }
+
+        const dot = document.getElementById('leashStatusDot');
+        const text = document.getElementById('leashStatusText');
+        const devText = document.getElementById('leashDeviceNameText');
+        const btnReal = document.getElementById('btnLeashPairReal');
+        const btnVirt = document.getElementById('btnLeashPairVirtual');
+        const btnDis = document.getElementById('btnLeashDisconnect');
+
+        if (dot) dot.className = `status-dot ${connected ? 'dot-connected' : 'dot-disconnected'}`;
+        if (text) text.textContent = connected ? (this.isMock ? '가상 시뮬레이터 연결됨' : '정상 연결됨') : '연결 대기 중';
+        if (devText) devText.textContent = devName;
+
+        if (btnReal) btnReal.style.display = connected ? 'none' : 'inline-flex';
+        if (btnVirt) btnVirt.style.display = connected ? 'none' : 'inline-flex';
+        if (btnDis) btnDis.style.display = connected ? 'inline-flex' : 'none';
+    },
+
+    renderMatrixPattern(patternKey) {
+        const patterns = {
+            'READY': {
+                color: 'on-green',
+                text: '대기 중 (READY)',
+                bits: [
+                    0,1,0,1,0,
+                    1,1,1,1,1,
+                    1,1,1,1,1,
+                    0,1,1,1,0,
+                    0,0,1,0,0
+                ]
+            },
+            'FORWARD': {
+                color: 'on-yellow',
+                text: '⬆️ 직진 (FORWARD)',
+                bits: [
+                    0,0,1,0,0,
+                    0,1,1,1,0,
+                    1,0,1,0,1,
+                    0,0,1,0,0,
+                    0,0,1,0,0
+                ]
+            },
+            'LEFT': {
+                color: 'on-cyan',
+                text: '⬅️ 좌회전 (TURN LEFT)',
+                bits: [
+                    0,0,1,0,0,
+                    0,1,0,0,0,
+                    1,1,1,1,1,
+                    0,1,0,0,0,
+                    0,0,1,0,0
+                ]
+            },
+            'RIGHT': {
+                color: 'on-cyan',
+                text: '➡️ 우회전 (TURN RIGHT)',
+                bits: [
+                    0,0,1,0,0,
+                    0,0,0,1,0,
+                    1,1,1,1,1,
+                    0,0,0,1,0,
+                    0,0,1,0,0
+                ]
+            },
+            'STOP': {
+                color: 'on-red',
+                text: '🛑 급정지 (EMERGENCY STOP)',
+                bits: [
+                    1,0,0,0,1,
+                    0,1,0,1,0,
+                    0,0,1,0,0,
+                    0,1,0,1,0,
+                    1,0,0,0,1
+                ]
+            }
+        };
+
+        const pat = patterns[patternKey] || patterns['READY'];
+        for (let i = 0; i < 25; i++) {
+            const px = document.getElementById(`ledPx_${i}`);
+            if (px) {
+                px.className = 'led-pixel';
+                if (pat.bits[i] === 1) {
+                    px.classList.add(pat.color);
+                }
+            }
+        }
+        const lbl = document.getElementById('spikeLedSymbolText');
+        if (lbl) lbl.textContent = pat.text;
+    },
+
+    playAudioHaptic(freqs) {
+        try {
+            if (!this.audioCtx) {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+            freqs.forEach((freq, idx) => {
+                setTimeout(() => {
+                    const osc = this.audioCtx.createOscillator();
+                    const gain = this.audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.18, this.audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.audioCtx.destination);
+                    osc.start();
+                    osc.stop(this.audioCtx.currentTime + 0.12);
+                }, idx * 110);
+            });
+        } catch (e) {}
+    },
+
+    triggerHaptic(type) {
+        const t = (type || '').toLowerCase();
+        let logMsg = '';
+
+        if (t === 'forward' || t === '직진') {
+            this.renderMatrixPattern('FORWARD');
+            if (navigator.vibrate) navigator.vibrate([220]);
+            this.playAudioHaptic([523]);
+            logMsg = '⬆️ [직진] 햅틱 1회 당김 펄스 & 5x5 전방 화살표 출력';
+            VoiceEngine.speak('직진 햅틱 신호입니다.');
+        } else if (t === 'left' || t === '좌회전') {
+            this.renderMatrixPattern('LEFT');
+            if (navigator.vibrate) navigator.vibrate([160, 90, 160]);
+            this.playAudioHaptic([440, 587]);
+            logMsg = '⬅️ [좌회전] 햅틱 2회 좌측 펄스 & 5x5 좌향 화살표 출력';
+            VoiceEngine.speak('좌회전 햅틱 신호입니다.');
+        } else if (t === 'right' || t === '우회전') {
+            this.renderMatrixPattern('RIGHT');
+            if (navigator.vibrate) navigator.vibrate([120, 80, 120, 80, 120]);
+            this.playAudioHaptic([440, 659]);
+            logMsg = '➡️ [우회전] 햅틱 3회 우측 펄스 & 5x5 우향 화살표 출력';
+            VoiceEngine.speak('우회전 햅틱 신호입니다.');
+        } else if (t === 'stop' || t === '정지' || t === 'estop') {
+            this.renderMatrixPattern('STOP');
+            if (navigator.vibrate) navigator.vibrate([350, 80, 350]);
+            this.playAudioHaptic([880, 440, 880]);
+            logMsg = '🛑 [급정지] 햅틱 강력 제동 텐션 & 5x5 정지 신호 출력';
+            VoiceEngine.speak('급정지 햅틱 신호입니다.');
+        }
+
+        this.logTerminal(logMsg, 'tx');
+        logEvent('[LEASH]', logMsg, 'info');
+
+        fetch('/api/robodog/leash/haptic', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: t })
+        }).catch(() => {});
+    }
+};
+
+// ---------------------------------------------------------
+// 2-2. [신규] ⚙️ 직관적 통합 환경 설정 매니저 (#userSettingModal)
+// ---------------------------------------------------------
+const SettingManager = {
+    modalEl: null,
+    activeTheme: 'white',
+    debounceTimer: null,
+
+    init() {
+        this.modalEl = document.getElementById('userSettingModal');
+
+        // 상단 헤더 버튼 및 모달 닫기 바인딩
+        const btnOpen = document.getElementById('btnOpenUserSetting');
+        const btnClose = document.getElementById('btnCloseUserSettingModal');
+        const btnCancel = document.getElementById('btnCancelUserSetting');
+        const btnSave = document.getElementById('btnSaveUserSetting');
+
+        if (btnOpen) btnOpen.addEventListener('click', () => this.openModal());
+        if (btnClose) btnClose.addEventListener('click', () => this.closeModal());
+        if (btnCancel) btnCancel.addEventListener('click', () => this.closeModal());
+        if (btnSave) btnSave.addEventListener('click', () => this.saveSettings());
+
+        // 만 나이 입력 시 실시간 상태 뱃지 업데이트
+        const inputAge = document.getElementById('settingInputAge');
+        if (inputAge) {
+            inputAge.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value) || 28;
+                this.updateAgeBadge(val);
+            });
+        }
+
+        // 나이 프리셋 칩 바인딩
+        document.querySelectorAll('.btn-chip-age').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const age = parseInt(btn.getAttribute('data-age') || '28');
+                if (inputAge) inputAge.value = age;
+                this.updateAgeBadge(age);
+            });
+        });
+
+        // 테마 선택 버튼 바인딩
+        const btnWhite = document.getElementById('btnThemeWhite');
+        const btnDark = document.getElementById('btnThemeDark');
+        if (btnWhite) {
+            btnWhite.addEventListener('click', () => this.selectTheme('white'));
+        }
+        if (btnDark) {
+            btnDark.addEventListener('click', () => this.selectTheme('dark'));
+        }
+
+        // 거주지 주소 자동완성 연동
+        const addrInp = document.getElementById('settingInputAddress');
+        const sugBox = document.getElementById('settingSuggestBox');
+        const sugList = document.getElementById('settingSuggestList');
+
+        if (addrInp && sugBox && sugList) {
+            addrInp.addEventListener('input', (e) => {
+                const q = e.target.value.trim();
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = setTimeout(async () => {
+                    if (q.length < 2) {
+                        sugBox.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(q)}`);
+                        const data = await res.json();
+                        if (data.status === 'success' && data.results && data.results.length > 0) {
+                            sugList.innerHTML = '';
+                            data.results.forEach(place => {
+                                const item = document.createElement('div');
+                                item.className = 'suggest-item';
+                                item.innerHTML = `
+                                    <div class="suggest-item-left">
+                                        <span class="suggest-item-name">🏡 ${place.name}</span>
+                                        <span class="suggest-item-addr">${place.address}</span>
+                                    </div>
+                                `;
+                                item.addEventListener('click', () => {
+                                    addrInp.value = place.address || place.name;
+                                    addrInp.setAttribute('data-lat', place.lat);
+                                    addrInp.setAttribute('data-lng', place.lng);
+                                    sugBox.style.display = 'none';
+                                });
+                                sugList.appendChild(item);
+                            });
+                            sugBox.style.display = 'block';
+                        } else {
+                            sugBox.style.display = 'none';
+                        }
+                    } catch (e) {}
+                }, 200);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!addrInp.contains(e.target) && !sugBox.contains(e.target)) {
+                    sugBox.style.display = 'none';
+                }
+            });
+        }
+
+        // 기본 테마 적용: 화이트 모드
+        const savedTheme = localStorage.getItem('robodog_theme') || 'white';
+        this.selectTheme(savedTheme, false);
+    },
+
+    updateAgeBadge(val) {
+        const badge = document.getElementById('settingAgeStatusBadge');
+        if (badge) {
+            const isSenior = val >= 60;
+            badge.className = `setting-status-badge ${isSenior ? 'over' : 'under'}`;
+            badge.textContent = `현재 상태: 만 ${val}세 (${isSenior ? '노인 안심 모드 + 일반 모드 사용 가능' : '일반 모드 전용'})`;
+        }
+    },
+
+    selectTheme(theme, notify = true) {
+        this.activeTheme = theme;
+        const btnWhite = document.getElementById('btnThemeWhite');
+        const btnDark = document.getElementById('btnThemeDark');
+
+        if (btnWhite) btnWhite.classList.toggle('active', theme === 'white');
+        if (btnDark) btnDark.classList.toggle('active', theme === 'dark');
+
+        if (theme === 'white') {
+            document.body.classList.add('theme-white');
+            document.body.classList.remove('theme-dark');
+        } else {
+            document.body.classList.add('theme-dark');
+            document.body.classList.remove('theme-white');
+        }
+        localStorage.setItem('robodog_theme', theme);
+        if (notify) {
+            logEvent('[THEME]', `화면 테마가 [${theme === 'white' ? '☀️ 화이트 모드' : '🌙 다크 모드'}]로 전환되었습니다.`, 'info');
+        }
+    },
+
+    openModal() {
+        if (!this.modalEl) this.modalEl = document.getElementById('userSettingModal');
+        if (!this.modalEl) return;
+
+        // 현재 값 채우기
+        const inputAge = document.getElementById('settingInputAge');
+        const inputName = document.getElementById('settingInputName');
+        const inputAddr = document.getElementById('settingInputAddress');
+        const inputDet = document.getElementById('settingInputDetailAddress');
+        const inputGuardName = document.getElementById('settingInputGuardianName');
+        const inputGuardPhone = document.getElementById('settingInputGuardianPhone');
+
+        const curUser = AuthManager.currentUser;
+        if (inputAge) {
+            inputAge.value = AppState.userAge;
+            this.updateAgeBadge(AppState.userAge);
+        }
+        if (inputName) inputName.value = curUser ? curUser.name.replace(/어르신|님/g, '').trim() : '';
+        if (inputAddr) inputAddr.value = curUser ? (curUser.address || '') : '';
+        if (inputDet) inputDet.value = curUser ? (curUser.detail_address || '') : '';
+        if (inputGuardName) inputGuardName.value = curUser ? (curUser.guardian_name || '') : '';
+        if (inputGuardPhone) inputGuardPhone.value = curUser ? (curUser.guardian_phone || '') : '';
+
+        this.selectTheme(localStorage.getItem('robodog_theme') || 'white', false);
+        this.modalEl.style.display = 'flex';
+    },
+
+    closeModal() {
+        if (this.modalEl) this.modalEl.style.display = 'none';
+    },
+
+    saveSettings() {
+        const inputAge = document.getElementById('settingInputAge');
+        const inputName = document.getElementById('settingInputName');
+        const inputAddr = document.getElementById('settingInputAddress');
+        const inputDet = document.getElementById('settingInputDetailAddress');
+        const inputGuardName = document.getElementById('settingInputGuardianName');
+        const inputGuardPhone = document.getElementById('settingInputGuardianPhone');
+
+        const ageVal = parseInt(inputAge?.value) || 28;
+        const name = inputName?.value.trim() || (AuthManager.currentUser?.name || '우승윤');
+        const address = inputAddr?.value.trim() || (AuthManager.currentUser?.address || '경기도 용인시 수지구 성복2로 220');
+        const detail_address = inputDet?.value.trim() || (AuthManager.currentUser?.detail_address || '힐스테이트 305동 1201호');
+        const guardian_name = inputGuardName?.value.trim() || '스팸 (가족)';
+        const guardian_phone = inputGuardPhone?.value.trim() || '010-1234-5678';
+
+        // 1. 만 나이 즉시 적용 및 영구 저장
+        AuthManager.setAge(ageVal, true);
+
+        // 2. 테마 저장 및 적용
+        this.selectTheme(this.activeTheme, true);
+
+        // 3. 사용자 프로필 동기화 및 로컬 저장
+        let userObj = AuthManager.currentUser || { id: `local_${Date.now()}`, username: 'user' };
+        userObj.name = name;
+        userObj.age = ageVal;
+        userObj.address = address;
+        userObj.detail_address = detail_address;
+        userObj.guardian_name = guardian_name;
+        userObj.guardian_phone = guardian_phone;
+
+        AuthManager.setCurrentUser(userObj, false);
+
+        fetch('/api/auth/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userObj)
+        }).catch(() => {});
+
+        logEvent('[SETTING]', `⚙️ 설정 저장 완료: 만 ${ageVal}세, ${name}님, 테마 [${this.activeTheme}]`, 'success');
+        VoiceEngine.speak(`설정이 저장되었습니다. 현재 만 ${ageVal}세로 적용되었습니다.`);
+        this.closeModal();
+    }
+};
+
 // ---------------------------------------------------------
 // 3. Web Speech API (TTS 음성 합성 & AI STT 음성 인식 비서)
 // ---------------------------------------------------------
@@ -1077,6 +1617,10 @@ const AuthManager = {
         const isEligible = val >= 60;
         AppState.isSeniorEligible = isEligible;
         localStorage.setItem('robodog_user_age', val);
+        if (this.currentUser) {
+            this.currentUser.age = val;
+            localStorage.setItem('robodog_current_user', JSON.stringify(this.currentUser));
+        }
 
         // 1. 헤더 만 나이 칩 업데이트
         const chipText = document.getElementById('headerAgeText');
@@ -1381,7 +1925,7 @@ const AuthManager = {
 
         // 1. 헤더 위젯 업데이트
         const headerText = document.getElementById('headerAuthText');
-        if (headerText) headerText.textContent = `👤 ${dispName}`;
+        if (headerText) headerText.textContent = dispName;
 
         const btnLogout = document.getElementById('btnHeaderLogout');
         if (btnLogout) btnLogout.style.display = 'inline-block';
@@ -2366,6 +2910,7 @@ const RealMapManager = {
             });
 
             logEvent('[NAV]', '🗺️ 실제 OpenStreetMap 고화질 지도 인스턴스 렌더링 성공! (회원가입/키 불필요)', 'success');
+            this.invalidate();
 
         } catch (err) {
             logEvent('[ERROR]', `실제 지도 초기화 오류: ${err.message}`, 'error');
@@ -4039,6 +4584,7 @@ document.addEventListener('DOMContentLoaded', () => {
     HomeAddressManager.init();
     AutocompleteSearchManager.init();
     RealMapManager.init();
+    setTimeout(() => RealMapManager.invalidate(), 300);
     CanvasRenderer.init();
     TrafficSignalEngine.init();
     CareTuningManager.init();
