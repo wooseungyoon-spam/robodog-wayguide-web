@@ -1860,15 +1860,15 @@
             </div>
         </div>
 
-        <!-- [원클릭 모드 토글 스위처]: 헤더 중앙 핵심 위치로 승격하여 어떤 화면 크기에서도 절대 잘리지 않음 -->
-        <div class="mode-switcher-container" id="modeSwitcherContainer">
+        <!-- [원클릭 모드 토글 스위처]: 노인/시각장애인 자격이 활성화될 때만 표시 -->
+        <div class="mode-switcher-container" id="modeSwitcherContainer" style="display: none !important;">
             <button id="btnSeniorMode" class="btn-mode" style="display: none !important;" title="노인 안심 모드 (만 60세 이상 전용)">
                 👵 노인 모드
             </button>
             <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
                 👤 일반 모드
             </button>
-            <button id="btnBlindMode" class="btn-mode" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 원터치 내비게이션)">
+            <button id="btnBlindMode" class="btn-mode" style="display: none !important;" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 원터치 내비게이션)">
                 🦯 시각장애인 모드
             </button>
         </div>
@@ -1877,14 +1877,14 @@
             <!-- [신규] 실제 로보독 블루투스 (BLE) 연동 버튼 -->
             <button id="btnHeaderBle" class="btn-ble-header" title="실제 로보독 블루투스(BLE) 무선 연결 및 관제">
                 <span id="bleHeaderIcon" class="ble-icon">📡</span>
-                <span id="bleHeaderText" class="ble-text">로보독 연결</span>
+                <span id="bleHeaderText" class="ble-text">로보독</span>
                 <span id="bleHeaderBadge" class="ble-badge badge-off">연결안됨</span>
             </button>
 
             <!-- [신규] 스마트 햅틱 리드줄 (레고 스파이크 BLE) 연동 버튼 -->
             <button id="btnHeaderLeash" class="btn-leash-header" title="스마트 햅틱 리드줄 (레고 스파이크 BLE) 연동 및 5x5 매트릭스 관제">
                 <span class="leash-icon">🦮</span>
-                <span id="leashHeaderText" class="leash-text">스파이크 리드줄</span>
+                <span id="leashHeaderText" class="leash-text">리드줄</span>
                 <span id="leashHeaderBadge" class="leash-badge badge-off">연결안됨</span>
             </button>
 

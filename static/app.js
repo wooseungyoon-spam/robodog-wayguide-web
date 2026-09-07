@@ -567,18 +567,6 @@ const LeashController = {
         if (btnStop) btnStop.addEventListener('click', () => this.triggerHaptic('stop'));
     },
 
-    
-    selectBlindMode(enable, notify = true) {
-        this.blindEnabled = enable;
-        const btnOn = document.getElementById('btnSettingBlindOn');
-        const btnOff = document.getElementById('btnSettingBlindOff');
-        if (btnOn) btnOn.classList.toggle('active', enable);
-        if (btnOff) btnOff.classList.toggle('active', !enable);
-        if (notify) {
-            logEvent('[SETTING]', `시각장애인 안심 모드: [${enable ? 'ON' : 'OFF'}]`, 'info');
-        }
-    },
-
     openModal() {
         if (!this.modalEl) this.modalEl = document.getElementById('leashModal');
         if (this.modalEl) this.modalEl.style.display = 'flex';
@@ -1097,9 +1085,10 @@ const SettingManager = {
             VoiceEngine.toggleNarrator(this.voiceEnabled);
         }
 
-        // 2-2. [신규] 시각장애인 안심 모드 적용
+        // 2-2. [신규] 시각장애인 안심 모드 적용 (설정에서 켰을 때만 버튼 노출 및 모드 활성)
         if (typeof this.blindEnabled === 'boolean') {
             AppState.isBlindMode = this.blindEnabled;
+            AuthManager.updateBlindEligibility(this.blindEnabled);
             if (this.blindEnabled) {
                 switchMode('blind');
             } else if (AppState.currentMode === 'blind') {
@@ -1833,6 +1822,10 @@ const AuthManager = {
             if (descEl) descEl.textContent = '자택 주소 미등록';
         }
 
+        this.updateBlindEligibility(false);
+        if (AppState.currentMode === 'blind') {
+            switchMode('general');
+        }
         logEvent('[AUTH]', '👤 현재 사용자 상태: [guest님] (미로그인 모드)', 'info');
         if (notify) {
             VoiceEngine.speak('로그아웃되었습니다. guest님으로 전환합니다.', false);
@@ -2076,12 +2069,51 @@ const AuthManager = {
             updateQuickDestinations(user.lat, user.lng);
         }
 
+        // 7. 시각장애인 여부 적용 (설정/회원가입에서 시각장애인으로 등록된 사용자만 버튼 표시)
+        this.updateBlindEligibility(!!user.is_blind);
         if (user.is_blind) {
             switchMode('blind');
+        } else if (AppState.currentMode === 'blind') {
+            switchMode('general');
         }
         logEvent('[AUTH]', `👤 사용자 연동 완료: [${dispName}] (만 ${userAge}세, 자택: ${user.address})`, 'success');
         if (notify) {
             VoiceEngine.speak(`안녕하세요, ${dispName}! 등록된 정보로 안심 케어를 시작합니다.`, false);
+        }
+        this.checkModeSwitcherVisibility();
+    },
+
+    updateBlindEligibility(isBlind) {
+        AppState.isBlindMode = !!isBlind;
+        const btnBlind = document.getElementById('btnBlindMode');
+        if (btnBlind) {
+            if (isBlind) {
+                btnBlind.style.setProperty('display', 'inline-flex', 'important');
+            } else {
+                btnBlind.style.setProperty('display', 'none', 'important');
+                btnBlind.classList.remove('active');
+                if (AppState.currentMode === 'blind') {
+                    switchMode('general');
+                }
+            }
+        }
+        this.checkModeSwitcherVisibility();
+    },
+
+    checkModeSwitcherVisibility() {
+        const btnSenior = document.getElementById('btnSeniorMode');
+        const btnBlind = document.getElementById('btnBlindMode');
+        const container = document.getElementById('modeSwitcherContainer');
+        if (!container) return;
+
+        const isSeniorVisible = btnSenior && btnSenior.style.display !== 'none';
+        const isBlindVisible = btnBlind && btnBlind.style.display !== 'none';
+
+        // 노인 모드와 시각장애인 모드 둘 다 숨김 상태이면 스위처 컨테이너 숨김 (공간 확보)
+        if (!isSeniorVisible && !isBlindVisible) {
+            container.style.setProperty('display', 'none', 'important');
+        } else {
+            container.style.setProperty('display', 'inline-flex', 'important');
         }
     }
 };
