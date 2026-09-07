@@ -1322,7 +1322,7 @@ body.mode-guardian .btn-mode.active {
 
 .tuning-content { display: flex; flex-direction: column; gap: 14px; }
 .slider-group { display: flex; flex-direction: column; gap: 6px; }
-.slider-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #CBD5E1; }
+.slider-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #0F172A; }
 .slider-val { color: var(--guardian-cyan); font-weight: 800; }
 .range-slider { width: 100%; accent-color: var(--guardian-cyan); cursor: pointer; }
 
@@ -3611,7 +3611,7 @@ body.mode-guardian .btn-mode.active {
 
 .haptic-btn-icon { font-size: 20px; }
 .haptic-btn-txt { display: flex; flex-direction: column; }
-.haptic-main { font-size: 12px; font-weight: 800; color: #F8FAFC; }
+.haptic-main { font-size: 12px; font-weight: 800; color: #0F172A; }
 .haptic-sub { font-size: 10px; color: #94A3B8; }
 
 /* =========================================================

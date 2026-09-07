@@ -1181,7 +1181,7 @@ const VoiceEngine = {
         if (textEl) textEl.textContent = this.isEnabled ? '음성 ON' : '음성 OFF';
         if (statusEl) {
             statusEl.textContent = this.isEnabled ? '켜짐 (ON)' : '꺼짐 (OFF)';
-            statusEl.style.color = this.isEnabled ? '#34D399' : '#94A3B8';
+            statusEl.style.color = this.isEnabled ? '#059669' : '#DC2626';
         }
         if (btnToggle) {
             if (this.isEnabled) {
