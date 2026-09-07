@@ -1855,6 +1855,134 @@
             gap: 8px !important;
         }
 
+    
+        /* =========================================================
+           [고대비 화이트 테마] AI 음성 인식 모달 시인성 100% 개선
+           ========================================================= */
+        .voice-modal-card {
+            width: 100% !important;
+            max-width: 520px !important;
+            background: #FFFFFF !important;
+            border: 1.5px solid #CBD5E1 !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+            color: #0F172A !important;
+            border-radius: 24px !important;
+            padding: 24px !important;
+        }
+        .voice-modal-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            border-bottom: 1px solid #F1F5F9 !important;
+            padding-bottom: 14px !important;
+        }
+        .voice-title-group {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+        .voice-title-group h2 {
+            font-size: 19px !important;
+            font-weight: 900 !important;
+            color: #0F172A !important;
+            margin: 0 !important;
+            letter-spacing: -0.02em !important;
+        }
+        .voice-badge {
+            background: #EDE9FE !important;
+            color: #6D28D9 !important;
+            border: 1px solid #C4B5FD !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            padding: 4px 10px !important;
+            border-radius: 9999px !important;
+        }
+        .voice-transcript-box {
+            background: #F8FAFC !important;
+            border: 1.5px solid #E2E8F0 !important;
+            border-radius: 16px !important;
+            padding: 16px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+            text-align: center !important;
+            margin: 12px 0 !important;
+        }
+        .transcript-label {
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            color: #64748B !important;
+            margin-bottom: 8px !important;
+        }
+        .transcript-text,
+        #voiceModalTranscript {
+            font-size: 19px !important;
+            font-weight: 900 !important;
+            color: #0F172A !important;
+            min-height: 36px !important;
+            line-height: 1.5 !important;
+        }
+        .hints-label {
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            color: #334155 !important;
+            margin-bottom: 8px !important;
+            display: block !important;
+        }
+        .voice-chip-btn {
+            background: #F1F5F9 !important;
+            border: 1px solid #CBD5E1 !important;
+            color: #1E293B !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            padding: 8px 14px !important;
+            border-radius: 9999px !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+        }
+        .voice-chip-btn:hover {
+            background: #EDE9FE !important;
+            color: #6D28D9 !important;
+            border-color: #8B5CF6 !important;
+            transform: translateY(-1px) !important;
+        }
+        .voice-fallback-input-row {
+            display: flex !important;
+            gap: 8px !important;
+            border-top: 1px solid #E2E8F0 !important;
+            padding-top: 14px !important;
+            margin-top: 6px !important;
+        }
+        .voice-fallback-input-row input {
+            flex: 1 !important;
+            background: #FFFFFF !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 12px !important;
+            padding: 10px 14px !important;
+            color: #0F172A !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            outline: none !important;
+        }
+        .voice-fallback-input-row input:focus {
+            border-color: #8B5CF6 !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+        }
+        .voice-fallback-input-row input::placeholder {
+            color: #94A3B8 !important;
+        }
+        .btn-voice-fallback-send {
+            background: #7C3AED !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 0 18px !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+        }
+        .btn-voice-fallback-send:hover {
+            background: #6D28D9 !important;
+        }
+
     </style>
 
 </head>
@@ -2349,10 +2477,11 @@
                 <div class="canvas-box">
                     <canvas id="digitalTwinCanvas" width="600" height="400"></canvas>
                     <div class="canvas-legend">
-                        <span><i class="dot dot-robo"></i> 로보독 센서</span>
-                        <span><i class="dot dot-traj"></i> 근거리 주행 궤적</span>
-                        <span><i class="dot dot-static"></i> 정적 장애물($5^\circ$ 우회)</span>
-                        <span><i class="dot dot-dynamic"></i> 보행자(동적 감속)</span>
+                        <span><i class="dot dot-robo"></i> 로보독 센서 (LiDAR)</span>
+                        <span><i class="dot dot-traj"></i> 실시간 회피 궤적</span>
+                        <span><i class="dot dot-static"></i> 감지 장애물 (실시간 회피 판단)</span>
+                        <span><i class="dot dot-dynamic"></i> 보행자 (동적 감속)</span>
+                        <span><i class="dot" style="background: #10B981; border-radius: 50%; display: inline-block; width: 8px; height: 8px;"></i> 횡단보도 신호등 (보행/정지 판단)</span>
                     </div>
                 </div>
             </div>

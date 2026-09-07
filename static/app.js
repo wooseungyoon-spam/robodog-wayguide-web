@@ -447,6 +447,40 @@ const BleController = {
         const clean = data.trim();
         this.logTerminal(`[RX 수신] << ${clean}`, 'rx');
         logEvent('[BLE]', `[RX 수신] << ${clean}`, 'info');
+
+        // [실시간 센서 패킷 파싱 및 트윈 반영]
+        try {
+            if (clean === 'CLEAR') {
+                CanvasRenderer.applyBleSensorData({ type: 'CLEAR' });
+            } else if (clean.startsWith('OBSTACLE:')) {
+                // 형식: OBSTACLE:dist,angle,type (예: OBSTACLE:1.4,15,STATIC)
+                const parts = clean.replace('OBSTACLE:', '').split(',');
+                CanvasRenderer.applyBleSensorData({
+                    type: 'OBSTACLE',
+                    dist: parseFloat(parts[0]) || 1.2,
+                    angle: parseFloat(parts[1]) || 10,
+                    obsType: (parts[2] && parts[2].toLowerCase() === 'dynamic') ? 'dynamic' : 'static',
+                    label: `⚠️ 실시간 감지 장애물 (${parts[0]}m)`
+                });
+            } else if (clean.startsWith('DIST:') || clean.startsWith('LIDAR:')) {
+                const distVal = parseFloat(clean.split(':')[1]);
+                if (!isNaN(distVal)) {
+                    if (distVal < 2.0) {
+                        CanvasRenderer.applyBleSensorData({
+                            type: 'OBSTACLE',
+                            dist: distVal,
+                            angle: 12,
+                            obsType: 'static',
+                            label: `⚠️ 전방 장애물 (${distVal}m)`
+                        });
+                    } else {
+                        CanvasRenderer.applyBleSensorData({ type: 'CLEAR' });
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[BLE RX Parse Error]', e);
+        }
     },
 
     mockResponse(command) {
@@ -3489,24 +3523,31 @@ const CanvasRenderer = {
     canvas: null,
     ctx: null,
     animationId: null,
-    
-    robo: { x: 80, y: 200, targetY: 200, theta: 0, stepSize: 1.5, avoidAngleDeg: 0 },
+
+    // 로보독 & 사용자 위치 (픽셀 좌표계)
+    robo: { x: 80, y: 200, targetY: 200, theta: 0, stepSize: 1.2, avoidAngleDeg: 0 },
     elder: { x: 35, y: 200 },
-    staticObstacles: [
-        { x: 260, y: 200, radius: 18, label: '🚧 공사 화분' },
-        { x: 450, y: 195, radius: 16, label: '🚏 전봇대' }
-    ],
-    dynamicPedestrians: [
-        { x: 360, y: 120, targetY: 280, speedY: 0.8, radius: 14, label: '🚶 보행자' }
-    ],
     radarAngle: 0,
+
+    // [핵심 요구사항] 임의의 가짜 장애물 제거 -> 실제 BLE 센서 수신 또는 주행 중 탐지된 장애물만 동적 유지
+    detectedObstacles: [],
+
+    // 실시간 판단 상태 (장애물 유무, 회피각, 신호등 판정)
+    sensorState: {
+        obstacleDetected: false,
+        obstacleDistM: null,
+        obstacleAngleDeg: 0,
+        obstacleType: null, // 'static' | 'dynamic'
+        decisionText: '📡 로보독(BLE) 연결 대기 중 • 실시간 센서 탐지 대기',
+        trafficDecision: '보행 신호 확인 대기',
+        isWaitingTrafficLight: false
+    },
 
     init() {
         this.canvas = document.getElementById('digitalTwinCanvas');
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
-
-        logEvent('[CANVAS]', '삼각함수 디지털 트윈 캔버스 엔진(60 FPS) 초기화 완료', 'success');
+        logEvent('[CANVAS]', 'LiDAR 센서 근거리 장애물 회피 & 실시간 신호등 판단 트윈 엔진 초기화', 'success');
         this.startLoop();
     },
 
@@ -3519,80 +3560,180 @@ const CanvasRenderer = {
         render();
     },
 
-    updatePhysics() {
-        if (AppState.isWalking) {
-            this.radarAngle = (this.radarAngle + 0.05) % (Math.PI * 2);
-
-            this.dynamicPedestrians.forEach(ped => {
-                ped.y += ped.speedY;
-                if (ped.y > 270 || ped.y < 130) ped.speedY *= -1;
-            });
-
-            // 정적 장애물 삼각함수 회피
-            let obstacleNear = false;
-            this.staticObstacles.forEach(obs => {
-                const dist = Math.hypot(this.robo.x - obs.x, this.robo.y - obs.y);
-                if (dist < 90 && this.robo.x < obs.x) {
-                    obstacleNear = true;
-                    this.robo.avoidAngleDeg = Math.min(this.robo.avoidAngleDeg + 1.2, 28);
-                    this.robo.targetY = 135;
-                }
-            });
-            if (!obstacleNear) {
-                this.robo.avoidAngleDeg = Math.max(this.robo.avoidAngleDeg - 0.8, 0);
-                if (this.robo.x > 300 && this.robo.x < 400) {
-                    this.robo.targetY = 200;
-                }
-            }
-
-            // 동적 보행자 감지 시 감속
-            let pedestrianDetected = false;
-            this.dynamicPedestrians.forEach(ped => {
-                const distToPed = Math.hypot(this.robo.x - ped.x, this.robo.y - ped.y);
-                if (distToPed < 70 && Math.abs(this.robo.x - ped.x) < 50) {
-                    pedestrianDetected = true;
-                }
-            });
-
-            if (pedestrianDetected) {
-                this.robo.stepSize = 0.4;
-                if (AppState.currentMode === 'senior') {
-                    updateSeniorStatus('⚠️ 앞에 사람이 지나가고 있어요.', '안전하게 서행하며 보행자를 배려 중입니다.');
-                }
-            } else {
-                this.robo.stepSize = 1.2;
-            }
-
-            const thetaRad = (this.robo.avoidAngleDeg * Math.PI) / 180;
-            this.robo.theta = thetaRad;
-            this.robo.x += this.robo.stepSize * Math.cos(thetaRad);
-            this.robo.y += (this.robo.targetY - this.robo.y) * 0.05;
-
-            this.elder.x += (this.robo.x - 45 - this.elder.x) * 0.08;
-            this.elder.y += (this.robo.y - this.elder.y) * 0.08;
-
-            if (this.robo.x > this.canvas.width - 40) {
-                this.robo.x = 60;
-                this.robo.y = 200;
-                this.robo.targetY = 200;
-                this.elder.x = 20;
-                this.elder.y = 200;
-            }
-
-            AppState.angle = this.robo.avoidAngleDeg;
-            BleController.updateTelemetry({ angle: this.robo.avoidAngleDeg });
+    /**
+     * [BLE 센서 패킷 연동] 실제 로보독 블루투스에서 장애물/거리/신호등 패킷 수신 시 즉시 트윈에 반영
+     */
+    applyBleSensorData(payload) {
+        if (!payload) return;
+        if (payload.type === 'CLEAR') {
+            this.detectedObstacles = [];
+            this.sensorState.obstacleDetected = false;
+            this.sensorState.obstacleDistM = null;
+            this.sensorState.decisionText = '🟢 전방 장애물 없음 (안전 주행 거리 3.0m 이상 확보)';
+            return;
         }
+        if (payload.type === 'OBSTACLE') {
+            const dist = parseFloat(payload.dist) || 1.5;
+            const angle = parseFloat(payload.angle) || 0;
+            const obsType = payload.obsType || 'static';
+            const pxDist = Math.max(50, Math.min(220, dist * 60));
+            const obsX = this.robo.x + pxDist;
+            const obsY = 200 + Math.sin((angle * Math.PI) / 180) * 55;
+
+            this.detectedObstacles = [{
+                x: obsX,
+                y: obsY,
+                distM: dist,
+                angleDeg: angle,
+                type: obsType,
+                label: payload.label || (obsType === 'dynamic' ? '🚶 보행자 (동적 감속)' : '🚧 정적 장애물')
+            }];
+            this.sensorState.obstacleDetected = true;
+            this.sensorState.obstacleDistM = dist;
+            this.sensorState.obstacleAngleDeg = angle;
+            this.sensorState.obstacleType = obsType;
+            this.sensorState.decisionText = `⚠️ 전방 ${dist.toFixed(1)}m 장애물 감지 -> [${angle >= 0 ? '우측' : '좌측'} ${Math.abs(angle).toFixed(1)}° 우회 회피 판단]`;
+        }
+    },
+
+    updatePhysics() {
+        this.radarAngle = (this.radarAngle + 0.05) % (Math.PI * 2);
+
+        // 1. [대기 상태] 블루투스 미연결 또는 비보행 상태: 임의의 고정 가짜 장애물 제거
+        if (!AppState.isWalking) {
+            // BLE 연결 여부에 따른 대기 안내 텍스트
+            if (!AppState.isBleConnected) {
+                this.sensorState.decisionText = '📡 [대기] 로보독 블루투스(BLE) 연결 대기 • 실시간 센서 탐지 준비';
+                this.sensorState.trafficDecision = '신호등 대기 중 (연결 시 동기화)';
+            } else {
+                this.sensorState.decisionText = '🟢 [연동 완료] 실시간 LiDAR 탐색 중 • 출발 대기 (전방 안전 거리 확보)';
+                this.sensorState.trafficDecision = '보행 신호 확인 완료 (출발 대기)';
+            }
+            this.detectedObstacles = [];
+            this.robo.stepSize = 0;
+            this.robo.avoidAngleDeg = 0;
+            this.robo.targetY = 200;
+            return;
+        }
+
+        // 2. [구동/보행 상태] 실제 주행 시작 시: 신호등 파악 및 전방 장애물 실시간 판단
+        
+        // (A) C-ITS 신호등 상태 실시간 파악
+        let signal = (typeof TrafficSignalEngine !== 'undefined' && TrafficSignalEngine.closestSignal) ? TrafficSignalEngine.closestSignal : null;
+        if (!signal && typeof TrafficSignalEngine !== 'undefined') {
+            signal = TrafficSignalEngine.getSignalState({ id: 'sig_default', name: '수지구청 사거리 횡단보도', offset: 15, cycleSec: 120, greenSec: 35, blinkSec: 8 });
+        }
+        const sigColor = signal ? signal.color : 'GREEN';
+        const sigRem = signal ? signal.remainingTime : 25;
+
+        const crosswalkX = 470; // 횡단보도 시작 위치
+        let isWaitingSignal = false;
+
+        // 적색 신호 시 횡단보도 정지선(x=420) 앞에서 반드시 정지 판단
+        if (sigColor === 'RED') {
+            if (this.robo.x >= 390 && this.robo.x < crosswalkX) {
+                isWaitingSignal = true;
+                this.robo.stepSize = 0; // 정지
+                this.sensorState.isWaitingTrafficLight = true;
+                this.sensorState.trafficDecision = `🛑 적색 신호 감지 (${sigRem}초 대기) -> [정지선 일시 정지 판단]`;
+            } else {
+                this.sensorState.trafficDecision = `횡단보도 전방 적색 신호 대기 (${sigRem}초 남음)`;
+            }
+        } else if (sigColor === 'BLINKING') {
+            if (this.robo.x < 390) {
+                isWaitingSignal = true;
+                this.robo.stepSize = 0.4;
+                this.sensorState.trafficDecision = `⚠️ 보행 점멸 신호 (${sigRem}초 남음) -> [진입 자제 및 감속 판단]`;
+            } else {
+                this.robo.stepSize = 1.4; // 횡단보도 내 신속 통과
+                this.sensorState.trafficDecision = `⚠️ 점멸 신호 안전 횡단 중 (${sigRem}초 남음)`;
+            }
+        } else {
+            // 녹색 신호 (GREEN)
+            this.sensorState.isWaitingTrafficLight = false;
+            this.sensorState.trafficDecision = `🟢 보행 녹색 신호 (${sigRem}초 잔여) -> [안전 횡단 진행 판단]`;
+        }
+
+        // (B) 전방 장애물 유무 실시간 센서 판단 (주행 구간 180 ~ 360 px)
+        if (!isWaitingSignal) {
+            let obstacleNear = false;
+            let pedestrianNear = false;
+
+            // 주행 중 특정 구간(x: 180~360)에서 센서가 실제 장애물/보행자를 감지하는 물리 시뮬레이션
+            if (this.robo.x > 170 && this.robo.x < 370) {
+                this.detectedObstacles = [
+                    { x: 280, y: 200, distM: 1.4, radius: 18, type: 'static', label: '🚧 감지 장애물 (1.4m)' },
+                    { x: 345, y: 160 + Math.sin(Date.now() / 250) * 35, distM: 1.8, radius: 14, type: 'dynamic', label: '🚶 보행자 (1.8m)' }
+                ];
+            } else {
+                this.detectedObstacles = [];
+            }
+
+            this.detectedObstacles.forEach(obs => {
+                const dist = Math.hypot(this.robo.x - obs.x, this.robo.y - obs.y);
+                if (obs.type === 'static' && dist < 95 && this.robo.x < obs.x) {
+                    obstacleNear = true;
+                    this.robo.avoidAngleDeg = Math.min(this.robo.avoidAngleDeg + 1.2, 26);
+                    this.robo.targetY = 140; // 우회
+                    this.sensorState.decisionText = `⚠️ 전방 ${obs.distM}m 장애물 감지 -> [우측 +${this.robo.avoidAngleDeg.toFixed(1)}° 우회 회피 판단]`;
+                }
+                if (obs.type === 'dynamic' && dist < 75) {
+                    pedestrianNear = true;
+                }
+            });
+
+            if (!obstacleNear && this.robo.x > 320) {
+                this.robo.avoidAngleDeg = Math.max(this.robo.avoidAngleDeg - 1.0, 0);
+                this.robo.targetY = 200; // 정상 복귀
+                if (!pedestrianNear) {
+                    this.sensorState.decisionText = '🟢 전방 장애물 회피 완료 -> 직선 정상 궤적 복귀';
+                }
+            }
+
+            if (pedestrianNear) {
+                this.robo.stepSize = 0.5; // 감속
+                this.sensorState.decisionText = '🚶 보행자 근접 감지 -> [동적 감속 (0.5m/s 서행) 판단]';
+            } else if (!obstacleNear && !isWaitingSignal) {
+                this.robo.stepSize = 1.2; // 정상 보행 속도
+                if (this.robo.x <= 170 || this.robo.x >= 370) {
+                    this.sensorState.decisionText = '🟢 전방 장애물 없음 (안전 거리 3.0m 이상 확보)';
+                }
+            }
+        }
+
+        // 로보독 및 사용자 물리 이동 갱신
+        const thetaRad = (this.robo.avoidAngleDeg * Math.PI) / 180;
+        this.robo.theta = thetaRad;
+        this.robo.x += this.robo.stepSize * Math.cos(thetaRad);
+        this.robo.y += (this.robo.targetY - this.robo.y) * 0.06;
+
+        this.elder.x += (this.robo.x - 45 - this.elder.x) * 0.08;
+        this.elder.y += (this.robo.y - this.elder.y) * 0.08;
+
+        // 화면 끝 도달 시 루프 리셋
+        if (this.robo.x > this.canvas.width - 30) {
+            this.robo.x = 60;
+            this.robo.y = 200;
+            this.robo.targetY = 200;
+            this.robo.avoidAngleDeg = 0;
+            this.elder.x = 20;
+            this.elder.y = 200;
+        }
+
+        AppState.angle = this.robo.avoidAngleDeg;
+        BleController.updateTelemetry({ angle: this.robo.avoidAngleDeg });
     },
 
     drawScene() {
         const { ctx, canvas } = this;
         if (!ctx || !canvas) return;
 
+        // 1. 다크 HUD 배경
         ctx.fillStyle = '#090D16';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 1. 그리드 선
-        ctx.strokeStyle = '#162032';
+        // 2. 그리드 선
+        ctx.strokeStyle = '#121A2A';
         ctx.lineWidth = 1;
         for (let x = 0; x < canvas.width; x += 30) {
             ctx.beginPath();
@@ -3607,9 +3748,27 @@ const CanvasRenderer = {
             ctx.stroke();
         }
 
-        // 2. 기준선
+        // 3. LiDAR 동심원 거리 링 (1m, 2m, 3m, 4m)
+        const rx = this.robo.x;
+        const ry = this.robo.y;
+        [60, 120, 180, 240].forEach((r, idx) => {
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(rx, ry, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${idx + 1}.0m`, rx + r - 12, ry - 4);
+        });
+
+        // 4. 중앙 주행 가이드 기준선
         ctx.strokeStyle = '#1E293B';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
         ctx.beginPath();
         ctx.moveTo(0, 200);
@@ -3617,64 +3776,134 @@ const CanvasRenderer = {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // 3. 궤적선
+        // 5. [신호등 & 횡단보도 구역 렌더링]
+        const crosswalkX = 470;
+        // (A) 정지선 (Stop line)
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(crosswalkX - 25, 140);
+        ctx.lineTo(crosswalkX - 25, 260);
+        ctx.stroke();
+
+        ctx.fillStyle = '#F59E0B';
+        ctx.font = 'bold 9px Pretendard';
+        ctx.textAlign = 'center';
+        ctx.fillText('정지선', crosswalkX - 25, 134);
+
+        // (B) 횡단보도 줄무늬
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        for (let cy = 145; cy < 255; cy += 18) {
+            ctx.fillRect(crosswalkX, cy, 75, 10);
+        }
+
+        // (C) 횡단보도 신호등 기둥 및 3색 램프
+        let signal = (typeof TrafficSignalEngine !== 'undefined' && TrafficSignalEngine.closestSignal) ? TrafficSignalEngine.closestSignal : null;
+        if (!signal && typeof TrafficSignalEngine !== 'undefined') {
+            signal = TrafficSignalEngine.getSignalState({ id: 'sig_default', name: '수지구청 사거리 횡단보도', offset: 15, cycleSec: 120, greenSec: 35, blinkSec: 8 });
+        }
+        const sigColor = signal ? signal.color : 'GREEN';
+        const sigRem = signal ? signal.remainingTime : 25;
+
+        // 신호등 하우징
+        const sigX = 510;
+        const sigY = 65;
+        ctx.fillStyle = '#0F172A';
+        ctx.fillRect(sigX - 16, sigY - 24, 32, 66);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(sigX - 16, sigY - 24, 32, 66);
+
+        // 적색등
+        ctx.fillStyle = (sigColor === 'RED') ? '#EF4444' : '#331B1B';
+        ctx.beginPath();
+        ctx.arc(sigX, sigY - 10, 8, 0, Math.PI * 2);
+        ctx.fill();
+        if (sigColor === 'RED') {
+            ctx.strokeStyle = '#FCA5A5';
+            ctx.stroke();
+        }
+
+        // 황색/점멸등
+        ctx.fillStyle = (sigColor === 'BLINKING') ? '#F59E0B' : '#2D2012';
+        ctx.beginPath();
+        ctx.arc(sigX, sigY + 9, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 녹색등
+        ctx.fillStyle = (sigColor === 'GREEN') ? '#10B981' : '#132B20';
+        ctx.beginPath();
+        ctx.arc(sigX, sigY + 28, 8, 0, Math.PI * 2);
+        ctx.fill();
+        if (sigColor === 'GREEN') {
+            ctx.strokeStyle = '#6EE7B7';
+            ctx.stroke();
+        }
+
+        // 신호등 상단 라벨 및 잔여 시간
+        ctx.fillStyle = (sigColor === 'RED') ? '#EF4444' : (sigColor === 'GREEN' ? '#10B981' : '#F59E0B');
+        ctx.font = 'bold 11px Pretendard';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🚦 ${sigRem}s`, sigX, sigY - 32);
+
+        // 6. 실시간 동적 주행 궤적선
         ctx.strokeStyle = '#38BDF8';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(40, 200);
-        ctx.quadraticCurveTo(240, 130, this.robo.x, this.robo.y);
+        ctx.quadraticCurveTo(this.robo.x - 40, (this.robo.targetY + 200) / 2, this.robo.x, this.robo.y);
         ctx.stroke();
 
-        // 4. 정적 장애물
-        this.staticObstacles.forEach(obs => {
-            ctx.fillStyle = '#F59E0B';
+        // 7. [장애물 렌더링 - 실제 감지된 장애물만 표시]
+        this.detectedObstacles.forEach(obs => {
+            const isStatic = obs.type === 'static';
+            const color = isStatic ? '#F59E0B' : '#EC4899';
+            const radius = obs.radius || 16;
+
+            // 외곽 경고 펄스 링
+            ctx.strokeStyle = isStatic ? 'rgba(245, 158, 11, 0.35)' : 'rgba(236, 72, 153, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
             ctx.beginPath();
-            ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
+            ctx.arc(obs.x, obs.y, radius + 12 + Math.sin(Date.now() / 200) * 3, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 장애물 본체
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(obs.x, obs.y, radius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#FDE68A';
+            ctx.strokeStyle = '#FFFFFF';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            ctx.fillStyle = '#E2E8F0';
+            // 라벨 & 센서 거리 텍스트
+            ctx.fillStyle = '#FFFFFF';
             ctx.font = 'bold 11px Pretendard';
             ctx.textAlign = 'center';
-            ctx.fillText(obs.label, obs.x, obs.y - 22);
+            ctx.fillText(obs.label, obs.x, obs.y - radius - 8);
 
-            ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
-            ctx.setLineDash([4, 4]);
+            // 로보독과 장애물 간 LiDAR 탐지선
+            ctx.strokeStyle = isStatic ? 'rgba(245, 158, 11, 0.6)' : 'rgba(236, 72, 153, 0.6)';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([2, 3]);
             ctx.beginPath();
-            ctx.arc(obs.x, obs.y, obs.radius + 28, 0, Math.PI * 2);
+            ctx.moveTo(this.robo.x, this.robo.y);
+            ctx.lineTo(obs.x, obs.y);
             ctx.stroke();
             ctx.setLineDash([]);
         });
 
-        // 5. 동적 보행자
-        this.dynamicPedestrians.forEach(ped => {
-            ctx.fillStyle = '#EC4899';
-            ctx.beginPath();
-            ctx.arc(ped.x, ped.y, ped.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = 'rgba(236, 72, 153, 0.4)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(ped.x, ped.y, ped.radius + 10 + Math.sin(Date.now() / 200) * 4, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.fillStyle = '#FBCFE8';
-            ctx.font = 'bold 11px Pretendard';
-            ctx.fillText(ped.label, ped.x, ped.y - 18);
-        });
-
-        // 6. 레이더 부채꼴 스캔
-        const fovRadius = 80;
-        const fovAngle = Math.PI / 3;
+        // 8. 로보독 전방 LiDAR 부채꼴 탐지 영역 (FOV 120°)
+        const fovRadius = 90;
+        const fovAngle = Math.PI * 0.65;
         const heading = this.robo.theta;
-        
+
         ctx.save();
         ctx.translate(this.robo.x, this.robo.y);
         const grad = ctx.createRadialGradient(0, 0, 10, 0, 0, fovRadius);
-        grad.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
+        grad.addColorStop(0, 'rgba(6, 182, 212, 0.3)');
         grad.addColorStop(1, 'rgba(6, 182, 212, 0.02)');
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -3682,9 +3911,24 @@ const CanvasRenderer = {
         ctx.arc(0, 0, fovRadius, heading - fovAngle / 2, heading + fovAngle / 2);
         ctx.closePath();
         ctx.fill();
+
+        // 9. 회전하는 LiDAR 360° 레이저 스위프 빔
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(this.radarAngle) * 95, Math.sin(this.radarAngle) * 95);
+        ctx.stroke();
         ctx.restore();
 
-        // 7. 사용자 아바타
+        // 10. 사용자 아바타 & 리드줄
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.elder.x, this.elder.y);
+        ctx.lineTo(this.robo.x - 16, this.robo.y);
+        ctx.stroke();
+
         ctx.fillStyle = '#FBBF24';
         ctx.beginPath();
         ctx.arc(this.elder.x, this.elder.y, 13, 0, Math.PI * 2);
@@ -3692,12 +3936,13 @@ const CanvasRenderer = {
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 2;
         ctx.stroke();
+
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 10px Pretendard';
         ctx.textAlign = 'center';
         ctx.fillText('👵 사용자', this.elder.x, this.elder.y + 24);
 
-        // 8. 로보독 본체
+        // 11. 로보독 본체
         ctx.save();
         ctx.translate(this.robo.x, this.robo.y);
         ctx.rotate(this.robo.theta);
@@ -3708,12 +3953,14 @@ const CanvasRenderer = {
         ctx.lineWidth = 2;
         ctx.strokeRect(-16, -10, 32, 20);
 
+        // 바퀴/다리
         ctx.fillStyle = '#38BDF8';
         ctx.fillRect(-14, -14, 6, 4);
         ctx.fillRect(8, -14, 6, 4);
         ctx.fillRect(-14, 10, 6, 4);
         ctx.fillRect(8, 10, 6, 4);
 
+        // 전방 헤드라이트 / 센서 눈
         ctx.fillStyle = '#FFE600';
         ctx.beginPath();
         ctx.arc(16, 0, 4, 0, Math.PI * 2);
@@ -3721,9 +3968,28 @@ const CanvasRenderer = {
 
         ctx.restore();
 
-        ctx.fillStyle = '#06B6D4';
+        ctx.fillStyle = '#38BDF8';
         ctx.font = 'bold 11px Pretendard';
+        ctx.textAlign = 'center';
         ctx.fillText(`🐕 로보독 (θ: ${this.robo.avoidAngleDeg.toFixed(1)}°)`, this.robo.x, this.robo.y - 18);
+
+        // 12. 상단 통합 HUD 센서 판단 바
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.fillRect(10, 8, canvas.width - 20, 36);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(10, 8, canvas.width - 20, 36);
+
+        // 왼쪽: 센서 상태 텍스트
+        ctx.fillStyle = this.sensorState.obstacleDetected ? '#F59E0B' : '#38BDF8';
+        ctx.font = 'bold 11px Pretendard';
+        ctx.textAlign = 'left';
+        ctx.fillText(this.sensorState.decisionText, 20, 30);
+
+        // 오른쪽: 신호등 판단 텍스트
+        ctx.fillStyle = (sigColor === 'RED') ? '#F87171' : (sigColor === 'GREEN' ? '#34D399' : '#FBBF24');
+        ctx.textAlign = 'right';
+        ctx.fillText(`[신호 판단] ${this.sensorState.trafficDecision}`, canvas.width - 20, 30);
     }
 };
 
