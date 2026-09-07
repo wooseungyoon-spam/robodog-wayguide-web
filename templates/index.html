@@ -1720,7 +1720,9 @@
                 <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
                     👤 일반 모드
                 </button>
-
+                <button id="btnBlindMode" class="btn-mode" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 원터치 내비게이션)">
+                    🦯 시각장애인 모드
+                </button>
             </div>
         </div>
     </header>
@@ -3128,7 +3130,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=14.0_blind_mode"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=16.0_blind_button"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->

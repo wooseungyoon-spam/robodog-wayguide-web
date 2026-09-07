@@ -1101,10 +1101,9 @@ const SettingManager = {
         if (typeof this.blindEnabled === 'boolean') {
             AppState.isBlindMode = this.blindEnabled;
             if (this.blindEnabled) {
-                document.body.classList.add('mode-blind');
-                VoiceEngine.toggleNarrator(true);
-            } else {
-                document.body.classList.remove('mode-blind');
+                switchMode('blind');
+            } else if (AppState.currentMode === 'blind') {
+                switchMode('general');
             }
         }
 
