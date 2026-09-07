@@ -1668,18 +1668,18 @@ const AuthManager = {
         }
         this.setAge(storedAge, false);
 
-        // 만 60세 미만일 경우 새로고침 시 무조건 일반 모드로 강제
-        if (AppState.userAge < 60) {
+        // 3대 모드 초기화: 기본 일반 모드로 정렬하되 상단 모드 스위처(일반/노인/시각장애인)는 상시 노출
+        if (!AppState.currentMode || AppState.currentMode === 'general') {
             AppState.currentMode = 'general';
             const sView = document.getElementById('seniorView');
             const gView = document.getElementById('generalView');
-            const bSenior = document.getElementById('btnSeniorMode');
+            const blView = document.getElementById('blindView');
             const bGeneral = document.getElementById('btnGeneralMode');
             if (sView) sView.style.setProperty('display', 'none', 'important');
+            if (blView) blView.style.setProperty('display', 'none', 'important');
             if (gView) gView.style.setProperty('display', 'flex', 'important');
-            if (bSenior) bSenior.style.setProperty('display', 'none', 'important');
             if (bGeneral) bGeneral.classList.add('active');
-            document.body.classList.remove('mode-senior');
+            document.body.classList.remove('mode-senior', 'mode-blind');
             document.body.classList.add('mode-general');
         }
 
@@ -1742,26 +1742,18 @@ const AuthManager = {
             inputSettingAge.value = val;
         }
 
+        // 상단 모드 스위처는 언제나 일반/노인/시각장애인 3대 모드를 자유롭게 전환할 수 있도록 유지
+        if (btnSenior) btnSenior.style.setProperty('display', 'inline-flex', 'important');
+        if (btnGeneral) btnGeneral.style.setProperty('display', 'inline-flex', 'important');
+        const btnBlindEl = document.getElementById('btnBlindMode');
+        if (btnBlindEl) btnBlindEl.style.setProperty('display', 'inline-flex', 'important');
+        const switcherContainerEl = document.getElementById('modeSwitcherContainer');
+        if (switcherContainerEl) switcherContainerEl.style.setProperty('display', 'inline-flex', 'important');
+
         if (!isEligible) {
-            // 만 60세 미만: 노인모드 버튼 완전 숨김
-            if (btnSenior) {
-                btnSenior.style.setProperty('display', 'none', 'important');
-            }
-            if (btnGeneral) {
-                btnGeneral.classList.add('active');
-            }
-            // 현재 노인 모드 화면이었다면 즉시 일반 모드로 자동 전환
-            if (AppState.currentMode === 'senior' || document.body.classList.contains('mode-senior')) {
-                switchMode('general');
-                VoiceEngine.speak(`현재 만 ${val}세입니다. 일반 모드가 적용되었습니다.`, false);
-                logEvent('[AGE]', `⚠️ 만 ${val}세: 만 60세 미만이므로 [노인 모드]가 비활성화되고 [일반 모드]가 적용됩니다.`, 'warn');
-            }
+            logEvent('[AGE]', `현재 만 ${val}세로 설정되었습니다. 일반/노인/시각장애인 모드를 상단에서 언제든 전환하실 수 있습니다.`, 'info');
         } else {
-            // 만 60세 이상: 노인모드 버튼 노출 (일반모드도 당연히 사용 가능)
-            if (btnSenior) {
-                btnSenior.style.display = 'inline-flex';
-            }
-            logEvent('[AGE]', `👵 만 ${val}세 어르신 확인 완료! [노인 모드]와 [일반 모드]를 자유롭게 이용하실 수 있습니다.`, 'success');
+            logEvent('[AGE]', `👵 만 ${val}세 어르신 확인 완료! [노인 모드]와 [일반 모드], [시각장애인 모드]를 자유롭게 이용하실 수 있습니다.`, 'success');
         }
 
         // 4. 백엔드 동기화
@@ -2087,15 +2079,7 @@ const AuthManager = {
         AppState.isBlindMode = !!isBlind;
         const btnBlind = document.getElementById('btnBlindMode');
         if (btnBlind) {
-            if (isBlind) {
-                btnBlind.style.setProperty('display', 'inline-flex', 'important');
-            } else {
-                btnBlind.style.setProperty('display', 'none', 'important');
-                btnBlind.classList.remove('active');
-                if (AppState.currentMode === 'blind') {
-                    switchMode('general');
-                }
-            }
+            btnBlind.style.setProperty('display', 'inline-flex', 'important');
         }
         this.checkModeSwitcherVisibility();
     },
@@ -2103,18 +2087,15 @@ const AuthManager = {
     checkModeSwitcherVisibility() {
         const btnSenior = document.getElementById('btnSeniorMode');
         const btnBlind = document.getElementById('btnBlindMode');
+        const btnGeneral = document.getElementById('btnGeneralMode');
         const container = document.getElementById('modeSwitcherContainer');
         if (!container) return;
 
-        const isSeniorVisible = btnSenior && btnSenior.style.display !== 'none';
-        const isBlindVisible = btnBlind && btnBlind.style.display !== 'none';
-
-        // 노인 모드와 시각장애인 모드 둘 다 숨김 상태이면 스위처 컨테이너 숨김 (공간 확보)
-        if (!isSeniorVisible && !isBlindVisible) {
-            container.style.setProperty('display', 'none', 'important');
-        } else {
-            container.style.setProperty('display', 'inline-flex', 'important');
-        }
+        // 일반 모드와 노인 모드 상단에 3대 모드 스위처(일반/노인/시각장애인) 상시 완전 노출
+        container.style.setProperty('display', 'inline-flex', 'important');
+        if (btnGeneral) btnGeneral.style.setProperty('display', 'inline-flex', 'important');
+        if (btnSenior) btnSenior.style.setProperty('display', 'inline-flex', 'important');
+        if (btnBlind) btnBlind.style.setProperty('display', 'inline-flex', 'important');
     }
 };
 
@@ -4582,13 +4563,6 @@ function triggerSosAlert() {
 // 11. 모드 전환 인터랙션 (👵 어르신 ↔ 👤 일반 모드 통합)
 // ---------------------------------------------------------
 function switchMode(targetMode) {
-    // 만 60세 미만은 노인 모드 접근 차단
-    if (targetMode === 'senior' && !AppState.isSeniorEligible) {
-        alert(`⚠️ [모드 이용 제한 안내]\n\n노인 안심 모드는 만 60세 이상 어르신 전용 기능입니다.\n(현재 설정된 나이: 만 ${AppState.userAge}세)\n\n상단 [🎂 만 ${AppState.userAge}세] 버튼을 누르시면 나이를 변경하실 수 있습니다.`);
-        logEvent('[AUTH]', `만 ${AppState.userAge}세: 만 60세 미만이므로 [노인 안심 모드] 접근이 제한되었습니다.`, 'warn');
-        return;
-    }
-
     AppState.currentMode = targetMode;
 
     const btnSenior = document.getElementById('btnSeniorMode');
@@ -4603,19 +4577,22 @@ function switchMode(targetMode) {
     if (btnGeneral) btnGeneral.classList.remove('active');
     if (btnBlind) btnBlind.classList.remove('active');
 
-    if (seniorView) seniorView.style.display = 'none';
-    if (generalView) generalView.style.display = 'none';
-    if (blindView) blindView.style.display = 'none';
+    // 3대 모드 UI 완전 독립 분리: 선택된 모드 외 다른 모드 UI는 100% 숨김
+    if (seniorView) seniorView.style.setProperty('display', 'none', 'important');
+    if (generalView) generalView.style.setProperty('display', 'none', 'important');
+    if (blindView) blindView.style.setProperty('display', 'none', 'important');
 
     const theme = localStorage.getItem('robodog_theme') || 'white';
+
     if (targetMode === 'senior') {
+        AppState.isBlindMode = false;
         document.body.classList.remove('mode-general', 'mode-guardian', 'mode-blind');
         document.body.classList.add('mode-senior');
         if (theme === 'white') document.body.classList.add('theme-white');
         if (btnSenior) btnSenior.classList.add('active');
-        if (seniorView) seniorView.style.display = 'flex';
+        if (seniorView) seniorView.style.setProperty('display', 'flex', 'important');
 
-        logEvent('[MODE]', '👵 [노인 안심 모드]로 전환되었습니다.', 'success');
+        logEvent('[MODE]', '👵 [노인 안심 모드]로 전환되었습니다. (노인 모드 UI 전용 표시)', 'success');
         const activeName = AuthManager.currentUser ? AuthManager.formatDisplayName(AuthManager.currentUser.name) : 'guest님';
         VoiceEngine.speak(`노인 안심 모드로 전환되었습니다. ${activeName}, 어디로 모실까요?`, false);
 
@@ -4625,23 +4602,22 @@ function switchMode(targetMode) {
         document.body.classList.add('mode-general');
         if (theme === 'white') document.body.classList.add('theme-white');
         if (btnGeneral) btnGeneral.classList.add('active');
-        if (generalView) generalView.style.display = 'flex';
+        if (generalView) generalView.style.setProperty('display', 'flex', 'important');
 
-        logEvent('[MODE]', '👤 [일반 모드 & 스마트 관제 센터]로 전환되었습니다.', 'info');
+        logEvent('[MODE]', '👤 [일반 모드 & 스마트 관제 센터]로 전환되었습니다. (일반 모드 UI 전용 표시)', 'info');
         RealMapManager.invalidate();
+
     } else if (targetMode === 'blind') {
         AppState.isBlindMode = true;
-        // 시각장애인 모드는 무조건 내레이터 자동 ON
         VoiceEngine.toggleNarrator(true);
 
         document.body.classList.remove('mode-general', 'mode-guardian', 'mode-senior');
         document.body.classList.add('mode-blind');
-        if (theme === 'white') document.body.classList.add('theme-white');
         if (btnBlind) btnBlind.classList.add('active');
-        if (blindView) blindView.style.display = 'flex'; // 시각장애인 전용 배리어프리 전면 화면
+        if (blindView) blindView.style.setProperty('display', 'flex', 'important');
 
-        logEvent('[MODE]', '🦯 [시각장애인 안심 모드] 가동 (100% 음성 인식 & 배리어프리 전용 뷰)', 'success');
-        VoiceEngine.speak('시각장애인 안심 보행 모드가 가동되었습니다. 음성 안내가 켜졌습니다. 화면 아무 곳이나 탭하고 가실 곳을 말씀해 주세요.', true);
+        logEvent('[MODE]', '🦯 [시각장애인 안심 모드] 가동: 상단 복잡한 헤더 숨김 및 100% 음성 비서 UI 전용 전개', 'success');
+        VoiceEngine.speak('시각장애인 안심 보행 모드가 가동되었습니다. 화면 아무 곳이나 탭하고 가실 곳을 말씀해 주세요.', true);
     }
 }
 
@@ -4731,8 +4707,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 시각장애인 전용 뷰 내 일반 모드 복귀 버튼
+    // 시각장애인 전용 뷰 내 모드 복귀 버튼들 (일반 모드로, 노인 모드로)
+    const btnBlindToGen = document.getElementById('btnBlindToGeneral');
+    const btnBlindToSen = document.getElementById('btnBlindToSenior');
     const btnExitBlind = document.getElementById('btnExitBlindMode');
+
+    if (btnBlindToGen) {
+        btnBlindToGen.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchMode('general');
+        });
+    }
+    if (btnBlindToSen) {
+        btnBlindToSen.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchMode('senior');
+        });
+    }
     if (btnExitBlind) {
         btnExitBlind.addEventListener('click', (e) => {
             e.preventDefault();

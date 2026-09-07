@@ -1843,6 +1843,18 @@
             color: #FFFFFF !important;
         }
 
+    
+        /* 시각장애인 모드 진입 시 상단 데스크톱 헤더 완전 숨김 (100% 시각장애인 UI 전용 전개) */
+        body.mode-blind .app-header {
+            display: none !important;
+        }
+
+        .blind-mode-nav-group {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
     </style>
 
 </head>
@@ -1860,15 +1872,15 @@
             </div>
         </div>
 
-        <!-- [원클릭 모드 토글 스위처]: 노인/시각장애인 자격이 활성화될 때만 표시 -->
-        <div class="mode-switcher-container" id="modeSwitcherContainer" style="display: none !important;">
-            <button id="btnSeniorMode" class="btn-mode" style="display: none !important;" title="노인 안심 모드 (만 60세 이상 전용)">
-                👵 노인 모드
-            </button>
+        <!-- [3대 모드 원클릭 스위처]: 일반 모드 / 노인 모드 상단 상시 노출 -->
+        <div class="mode-switcher-container" id="modeSwitcherContainer">
             <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
                 👤 일반 모드
             </button>
-            <button id="btnBlindMode" class="btn-mode" style="display: none !important;" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 원터치 내비게이션)">
+            <button id="btnSeniorMode" class="btn-mode" title="노인 안심 모드 (만 60세 이상 전용)">
+                👵 노인 모드
+            </button>
+            <button id="btnBlindMode" class="btn-mode" title="시각장애인 안심 모드 (음성 100% & 전체 화면 원터치)">
                 🦯 시각장애인 모드
             </button>
         </div>
@@ -2089,7 +2101,10 @@
     <main id="blindView" class="view-container blind-view-container" style="display: none;">
         <div class="blind-view-header">
             <div class="blind-badge">🦯 시각장애인 안심 보행 모드 (음성 100%)</div>
-            <button type="button" id="btnExitBlindMode" class="btn-exit-blind">✕ 일반 모드로 복귀</button>
+            <div class="blind-mode-nav-group">
+                <button type="button" id="btnBlindToGeneral" class="btn-exit-blind">👤 일반 모드로</button>
+                <button type="button" id="btnBlindToSenior" class="btn-exit-blind">👵 노인 모드로</button>
+            </div>
         </div>
 
         <!-- 1. 메인: 화면 전체 초대형 원터치 음성인식 서피스 -->
