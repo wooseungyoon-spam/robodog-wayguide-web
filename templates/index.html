@@ -1654,9 +1654,193 @@
             cursor: pointer !important;
             transition: all 0.2s ease !important;
         }
-        .btn-blind-cancel-act:hover {
-            background: #DC2626 !important;
-            border-color: #EF4444 !important;
+        /* 모드 토글 스위처 - 헤더 중앙 독립 배치 (어떤 화면에서도 절대 잘리지 않음) */
+        .mode-switcher-container {
+            background: #F1F5F9 !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 9999px !important;
+            padding: 3px 6px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            flex-shrink: 0 !important;
+            margin: 0 12px !important;
+            z-index: 10 !important;
+        }
+        .btn-mode {
+            border: none !important;
+            background: transparent !important;
+            color: #475569 !important;
+            height: 34px !important;
+            padding: 0 14px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            border-radius: 9999px !important;
+            white-space: nowrap !important;
+            cursor: pointer !important;
+            flex-shrink: 0 !important;
+            transition: all 0.15s ease !important;
+        }
+        .btn-mode.active {
+            background: #2563EB !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+        }
+
+        /* ---------------------------------------------------------
+           [신규] 🦯 시각장애인 전용 배리어프리 인터페이스 스타일 (고대비 & 음성 퍼스트)
+           --------------------------------------------------------- */
+        .blind-view-container {
+            background-color: #0B0F19 !important;
+            min-height: calc(100vh - 65px) !important;
+            padding: 20px 16px 40px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 20px !important;
+            box-sizing: border-box !important;
+        }
+        .blind-view-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+        .blind-badge {
+            background: #FEF08A !important;
+            color: #854D0E !important;
+            font-size: 15px !important;
+            font-weight: 800 !important;
+            padding: 8px 18px !important;
+            border-radius: 9999px !important;
+            border: 2px solid #FACC15 !important;
+        }
+        .btn-exit-blind {
+            background: #334155 !important;
+            color: #F8FAFC !important;
+            border: 1.5px solid #64748B !important;
+            border-radius: 9999px !important;
+            padding: 8px 16px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+        }
+        .btn-exit-blind:hover {
+            background: #475569 !important;
+        }
+        .blind-voice-hero {
+            background: linear-gradient(145deg, #1E293B, #0F172A) !important;
+            border: 3px solid #FACC15 !important;
+            border-radius: 28px !important;
+            padding: 40px 20px !important;
+            text-align: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 12px 35px rgba(250, 204, 21, 0.25) !important;
+            transition: transform 0.15s ease, background-color 0.2s ease !important;
+            user-select: none !important;
+        }
+        .blind-voice-hero:active {
+            transform: scale(0.98) !important;
+            background: #1E3A8A !important;
+        }
+        .blind-mic-circle {
+            width: 104px !important;
+            height: 104px !important;
+            background: #FACC15 !important;
+            border-radius: 50% !important;
+            margin: 0 auto 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 0 30px rgba(250, 204, 21, 0.5) !important;
+            animation: blindHeroPulse 2s infinite !important;
+        }
+        @keyframes blindHeroPulse {
+            0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8); }
+            70% { box-shadow: 0 0 0 24px rgba(250, 204, 21, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+        .blind-mic-icon {
+            font-size: 48px !important;
+        }
+        .blind-hero-title {
+            font-size: 27px !important;
+            font-weight: 900 !important;
+            color: #FFFFFF !important;
+            line-height: 1.35 !important;
+            margin: 0 0 10px !important;
+        }
+        .blind-hero-sub {
+            font-size: 16px !important;
+            color: #FACC15 !important;
+            font-weight: 700 !important;
+            margin: 0 0 18px !important;
+        }
+        .blind-tap-badge {
+            display: inline-block !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            color: #F1F5F9 !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            padding: 10px 20px !important;
+            border-radius: 9999px !important;
+        }
+        .blind-quick-destinations {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+        }
+        .blind-section-label {
+            color: #CBD5E1 !important;
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            padding-left: 4px !important;
+        }
+        .blind-dest-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+        }
+        .btn-blind-dest {
+            background: #1E293B !important;
+            border: 2.5px solid #38BDF8 !important;
+            border-radius: 20px !important;
+            padding: 18px 22px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 18px !important;
+            cursor: pointer !important;
+            text-align: left !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            transition: all 0.15s ease !important;
+        }
+        .btn-blind-dest:active {
+            background: #0284C7 !important;
+            border-color: #FFFFFF !important;
+            transform: scale(0.98) !important;
+        }
+        .bbd-num {
+            background: #38BDF8 !important;
+            color: #0F172A !important;
+            font-size: 22px !important;
+            font-weight: 900 !important;
+            width: 42px !important;
+            height: 42px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+        }
+        .bbd-icon {
+            font-size: 34px !important;
+            flex-shrink: 0 !important;
+        }
+        .bbd-text {
+            font-size: 21px !important;
+            font-weight: 800 !important;
+            color: #FFFFFF !important;
         }
 
     </style>
@@ -1674,6 +1858,19 @@
                 <span class="brand-title">로보독 WAY GUIDE</span>
                 <span class="brand-sub">스마트 보행 보조 & 안심 동행 허브</span>
             </div>
+        </div>
+
+        <!-- [원클릭 모드 토글 스위처]: 헤더 중앙 핵심 위치로 승격하여 어떤 화면 크기에서도 절대 잘리지 않음 -->
+        <div class="mode-switcher-container" id="modeSwitcherContainer">
+            <button id="btnSeniorMode" class="btn-mode" style="display: none !important;" title="노인 안심 모드 (만 60세 이상 전용)">
+                👵 노인 모드
+            </button>
+            <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
+                👤 일반 모드
+            </button>
+            <button id="btnBlindMode" class="btn-mode" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 원터치 내비게이션)">
+                🦯 시각장애인 모드
+            </button>
         </div>
         
         <div class="header-right-group">
@@ -1710,19 +1907,6 @@
                     <span id="headerAuthText">guest님 (로그인)</span>
                 </button>
                 <button id="btnHeaderLogout" class="btn-auth-logout" style="display: none;" title="로그아웃">로그아웃</button>
-            </div>
-
-            <!-- 원클릭 모드 토글 스위처 (만 60세 미만은 노인모드 기본 숨김) -->
-            <div class="mode-switcher-container" id="modeSwitcherContainer">
-                <button id="btnSeniorMode" class="btn-mode" style="display: none !important;" title="노인 안심 모드 (만 60세 이상 전용)">
-                    👵 노인 모드
-                </button>
-                <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
-                    👤 일반 모드
-                </button>
-                <button id="btnBlindMode" class="btn-mode" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 원터치 내비게이션)">
-                    🦯 시각장애인 모드
-                </button>
             </div>
         </div>
     </header>
@@ -1896,6 +2080,54 @@
             </button>
         </section>
 
+    </main>
+
+    <!-- =========================================================
+         [신규 모드] 🦯 시각장애인 전용 배리어프리 인터페이스 (Blind Accessibility View)
+         - 노인 모드와 완전히 차별화된 100% 음성 및 대형 원터치 전용 화면
+         ========================================================= -->
+    <main id="blindView" class="view-container blind-view-container" style="display: none;">
+        <div class="blind-view-header">
+            <div class="blind-badge">🦯 시각장애인 안심 보행 모드 (음성 100%)</div>
+            <button type="button" id="btnExitBlindMode" class="btn-exit-blind">✕ 일반 모드로 복귀</button>
+        </div>
+
+        <!-- 1. 메인: 화면 전체 초대형 원터치 음성인식 서피스 -->
+        <section class="blind-voice-hero" id="btnBlindVoiceTrigger" role="button" aria-label="화면을 터치하고 목적지를 말씀하세요">
+            <div class="blind-mic-circle">
+                <span class="blind-mic-icon">🎙️</span>
+            </div>
+            <h1 class="blind-hero-title">화면을 탭하고<br>가실 곳을 말씀하세요</h1>
+            <p class="blind-hero-sub">예: "병원", "약국", "우리집", "성복역"</p>
+            <div class="blind-tap-badge">👆 화면 어디를 터치해도 즉시 음성 인식이 시작됩니다</div>
+        </section>
+
+        <!-- 2. 서브: 눈으로 볼 필요 없이 큼직하게 분할된 원터치 즐겨찾기 목적지 -->
+        <section class="blind-quick-destinations">
+            <div class="blind-section-label">자주 가시는 곳 (터치 시 즉시 출발 안내)</div>
+            <div class="blind-dest-grid">
+                <button type="button" class="btn-blind-dest" data-dest="우리집">
+                    <span class="bbd-num">1</span>
+                    <span class="bbd-icon">🏡</span>
+                    <span class="bbd-text">우리집</span>
+                </button>
+                <button type="button" class="btn-blind-dest" data-dest="수지 성모이비인후과의원">
+                    <span class="bbd-num">2</span>
+                    <span class="bbd-icon">🏥</span>
+                    <span class="bbd-text">병 원 (성모이비인후과)</span>
+                </button>
+                <button type="button" class="btn-blind-dest" data-dest="수지 온누리약국">
+                    <span class="bbd-num">3</span>
+                    <span class="bbd-icon">💊</span>
+                    <span class="bbd-text">약 국 (온누리약국)</span>
+                </button>
+                <button type="button" class="btn-blind-dest" data-dest="수지 노인복지관">
+                    <span class="bbd-num">4</span>
+                    <span class="bbd-icon">🏢</span>
+                    <span class="bbd-text">복지관 (노인복지관)</span>
+                </button>
+            </div>
+        </section>
     </main>
 
     <!-- =========================================================
@@ -3130,7 +3362,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=16.0_blind_button"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=17.0_blind_voice_hero"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->

@@ -4562,20 +4562,22 @@ function switchMode(targetMode) {
     const btnSenior = document.getElementById('btnSeniorMode');
     const btnGeneral = document.getElementById('btnGeneralMode');
     const btnBlind = document.getElementById('btnBlindMode');
-    if (btnBlind) btnBlind.classList.remove('active');
 
     const seniorView = document.getElementById('seniorView');
     const generalView = document.getElementById('generalView');
+    const blindView = document.getElementById('blindView');
 
     if (btnSenior) btnSenior.classList.remove('active');
     if (btnGeneral) btnGeneral.classList.remove('active');
+    if (btnBlind) btnBlind.classList.remove('active');
 
     if (seniorView) seniorView.style.display = 'none';
     if (generalView) generalView.style.display = 'none';
+    if (blindView) blindView.style.display = 'none';
 
     const theme = localStorage.getItem('robodog_theme') || 'white';
     if (targetMode === 'senior') {
-        document.body.classList.remove('mode-general', 'mode-guardian');
+        document.body.classList.remove('mode-general', 'mode-guardian', 'mode-blind');
         document.body.classList.add('mode-senior');
         if (theme === 'white') document.body.classList.add('theme-white');
         if (btnSenior) btnSenior.classList.add('active');
@@ -4604,11 +4606,10 @@ function switchMode(targetMode) {
         document.body.classList.add('mode-blind');
         if (theme === 'white') document.body.classList.add('theme-white');
         if (btnBlind) btnBlind.classList.add('active');
-        if (seniorView) seniorView.style.display = 'flex'; // 초대형 목적지 원터치 카드 활용
+        if (blindView) blindView.style.display = 'flex'; // 시각장애인 전용 배리어프리 전면 화면
 
-        logEvent('[MODE]', '🦯 [시각장애인 안심 모드]가 가동되었습니다. (음성 안내 100% 자동 활성화)', 'success');
-        const activeName = AuthManager.currentUser ? AuthManager.formatDisplayName(AuthManager.currentUser.name) : 'guest님';
-        VoiceEngine.speak(`시각장애인 안심 보행 모드가 가동되었습니다. 음성 안내가 켜졌습니다. ${activeName}, 원하시는 목적지 버튼을 누르시면 전체 화면 터치 내비게이션으로 안전하게 안내합니다.`, true);
+        logEvent('[MODE]', '🦯 [시각장애인 안심 모드] 가동 (100% 음성 인식 & 배리어프리 전용 뷰)', 'success');
+        VoiceEngine.speak('시각장애인 안심 보행 모드가 가동되었습니다. 음성 안내가 켜졌습니다. 화면 아무 곳이나 탭하고 가실 곳을 말씀해 주세요.', true);
     }
 }
 
@@ -4670,6 +4671,40 @@ document.addEventListener('DOMContentLoaded', () => {
         btnBlind.addEventListener('click', (e) => {
             e.preventDefault();
             switchMode('blind');
+        });
+    }
+
+    // [신규] 🦯 시각장애인 전용 화면 인터랙션 바인딩
+    const btnBlindVoiceHero = document.getElementById('btnBlindVoiceTrigger');
+    if (btnBlindVoiceHero) {
+        btnBlindVoiceHero.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (navigator.vibrate) navigator.vibrate(100);
+            VoiceEngine.speak('어디로 가실까요? 말씀해 주세요.', true);
+            setTimeout(() => {
+                VoiceEngine.openVoiceModal();
+            }, 900);
+        });
+    }
+
+    // 시각장애인 4대 쾌속 목적지 바 터치 시 즉시 길안내 가동
+    document.querySelectorAll('.btn-blind-dest').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (navigator.vibrate) navigator.vibrate(120);
+            const dest = btn.getAttribute('data-dest');
+            if (dest) {
+                startNavigation(dest);
+            }
+        });
+    });
+
+    // 시각장애인 전용 뷰 내 일반 모드 복귀 버튼
+    const btnExitBlind = document.getElementById('btnExitBlindMode');
+    if (btnExitBlind) {
+        btnExitBlind.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchMode('general');
         });
     }
 
