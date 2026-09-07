@@ -869,6 +869,16 @@ const SettingManager = {
             btnDark.addEventListener('click', () => this.selectTheme('dark'));
         }
 
+        // [신규] 내레이터 음성 안내 ON/OFF 버튼 바인딩
+        const btnVoiceOn = document.getElementById('btnSettingVoiceOn');
+        const btnVoiceOff = document.getElementById('btnSettingVoiceOff');
+        if (btnVoiceOn) {
+            btnVoiceOn.addEventListener('click', () => this.selectVoice(true));
+        }
+        if (btnVoiceOff) {
+            btnVoiceOff.addEventListener('click', () => this.selectVoice(false));
+        }
+
         // 거주지 주소 자동완성 연동
         const addrInp = document.getElementById('settingInputAddress');
         const sugBox = document.getElementById('settingSuggestBox');
@@ -934,6 +944,14 @@ const SettingManager = {
         }
     },
 
+    selectVoice(enabled, notify = false) {
+        this.voiceEnabled = enabled;
+        const btnOn = document.getElementById('btnSettingVoiceOn');
+        const btnOff = document.getElementById('btnSettingVoiceOff');
+        if (btnOn) btnOn.classList.toggle('active', enabled);
+        if (btnOff) btnOff.classList.toggle('active', !enabled);
+    },
+
     selectTheme(theme, notify = true) {
         this.activeTheme = theme;
         const btnWhite = document.getElementById('btnThemeWhite');
@@ -979,6 +997,7 @@ const SettingManager = {
         if (inputGuardPhone) inputGuardPhone.value = curUser ? (curUser.guardian_phone || '') : '';
 
         this.selectTheme(localStorage.getItem('robodog_theme') || 'white', false);
+        this.selectVoice(VoiceEngine.isEnabled, false);
         this.modalEl.style.display = 'flex';
     },
 
@@ -1006,6 +1025,11 @@ const SettingManager = {
 
         // 2. 테마 저장 및 적용
         this.selectTheme(this.activeTheme, true);
+
+        // 2-1. [신규] 내레이터 음성 안내 상태 적용
+        if (typeof this.voiceEnabled === 'boolean') {
+            VoiceEngine.toggleNarrator(this.voiceEnabled);
+        }
 
         // 3. 사용자 프로필 동기화 및 로컬 저장
         let userObj = AuthManager.currentUser || { id: `local_${Date.now()}`, username: 'user' };
