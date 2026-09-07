@@ -19,7 +19,430 @@
     {% endif %}
 
     <!-- Local CSS with cache-busting -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=8.0_pure_white">
+
+    <!-- [안심 보장] ☀️ 완벽한 화이트 모드 및 헤더 버튼 UI 완벽 최적화 스타일 (캐시 무관 즉시 적용) -->
+    <style>
+        /* 1. 글로벌 바디 & 헤더 화이트 모드 */
+        body, body.mode-general, body.theme-white {
+            background-color: #F8FAFC !important;
+            color: #0F172A !important;
+        }
+
+        .app-header, body.mode-general .app-header, body.theme-white .app-header {
+            background-color: #FFFFFF !important;
+            border-bottom: 1px solid #E2E8F0 !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+            padding: 10px 20px !important;
+        }
+
+        .brand-title, body.mode-general .brand-title, body.theme-white .brand-title {
+            color: #1E293B !important;
+            font-weight: 900 !important;
+        }
+
+        .brand-sub, body.mode-general .brand-sub, body.theme-white .brand-sub {
+            color: #64748B !important;
+        }
+
+        /* 2. 헤더 오른쪽 그룹 - 가로 스크롤 및 줄바꿈 완전 방지 */
+        .header-right-group {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            scrollbar-width: none !important;
+        }
+        .header-right-group::-webkit-scrollbar {
+            display: none !important;
+        }
+
+        .header-auth-area {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            flex-shrink: 0 !important;
+        }
+
+        /* 3. 헤더 내 모든 버튼 - 둥근 알약(Pill) 형태, 텍스트 줄바꿈 절대 방지 */
+        .app-header button,
+        .btn-ble-header,
+        .btn-leash-header,
+        .btn-faceid-header,
+        .btn-narrator,
+        .btn-setting-header,
+        .btn-age-chip,
+        .btn-auth-header,
+        .btn-auth-logout,
+        .btn-mode {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            height: 38px !important;
+            padding: 0 14px !important;
+            border-radius: 9999px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-sizing: border-box !important;
+            line-height: 1 !important;
+            text-decoration: none !important;
+        }
+
+        /* 🦮 [스마트 스파이크 리드줄] 알약 버튼 - 세련된 소프트 블루 */
+        .btn-leash-header {
+            background: #EFF6FF !important;
+            border: 1.5px solid #BFDBFE !important;
+            color: #1E40AF !important;
+            box-shadow: 0 1px 3px rgba(30, 64, 175, 0.08) !important;
+        }
+        .btn-leash-header:hover {
+            background: #DBEAFE !important;
+            border-color: #93C5FD !important;
+            transform: translateY(-1px) !important;
+        }
+        .leash-badge {
+            border-radius: 9999px !important;
+            padding: 2px 7px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            margin-left: 4px !important;
+        }
+        .leash-badge.badge-off {
+            background: #FEE2E2 !important;
+            color: #DC2626 !important;
+            border: 1px solid #FECACA !important;
+        }
+        .leash-badge.badge-on {
+            background: #DCFCE7 !important;
+            color: #15803D !important;
+            border: 1px solid #86EFAC !important;
+        }
+
+        /* ⚙️ [설정] 알약 버튼 - 세련된 슬레이트 그레이 */
+        .btn-setting-header {
+            background: #F8FAFC !important;
+            border: 1.5px solid #CBD5E1 !important;
+            color: #1E293B !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        }
+        .btn-setting-header:hover {
+            background: #F1F5F9 !important;
+            border-color: #94A3B8 !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 🎂 [만 나이] 알약 칩 - 따뜻한 앰버/골드 */
+        .btn-age-chip {
+            background: #FFFBEB !important;
+            border: 1.5px solid #FDE68A !important;
+            color: #92400E !important;
+            box-shadow: 0 1px 3px rgba(146, 64, 14, 0.08) !important;
+        }
+        .btn-age-chip:hover {
+            background: #FEF3C7 !important;
+            border-color: #F59E0B !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 📡 [로보독 연결] 알약 버튼 - 소프트 에메랄드 */
+        .btn-ble-header {
+            background: #F0FDF4 !important;
+            border: 1.5px solid #BBF7D0 !important;
+            color: #166534 !important;
+        }
+        .btn-ble-header:hover {
+            background: #DCFCE7 !important;
+            border-color: #86EFAC !important;
+        }
+        .ble-badge {
+            border-radius: 9999px !important;
+            padding: 2px 7px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            margin-left: 4px !important;
+        }
+        .ble-badge.badge-off {
+            background: #FEE2E2 !important;
+            color: #DC2626 !important;
+            border: 1px solid #FECACA !important;
+        }
+        .ble-badge.badge-on {
+            background: #DCFCE7 !important;
+            color: #15803D !important;
+            border: 1px solid #86EFAC !important;
+        }
+
+        /* 📷 [Face ID] 알약 버튼 - 소프트 퍼플 */
+        .btn-faceid-header {
+            background: #FAF5FF !important;
+            border: 1.5px solid #E9D5FF !important;
+            color: #6B21A8 !important;
+        }
+        .btn-faceid-header:hover {
+            background: #F3E8FF !important;
+            border-color: #D8B4FE !important;
+        }
+
+        /* 🔊 [음성 안내] 알약 버튼 */
+        .btn-narrator {
+            background: #F8FAFC !important;
+            border: 1.5px solid #CBD5E1 !important;
+            color: #334155 !important;
+        }
+        .btn-narrator:hover {
+            background: #F1F5F9 !important;
+            border-color: #94A3B8 !important;
+        }
+
+        /* 👤 [사용자 프로필] 알약 버튼 - 로얄 블루 */
+        .btn-auth-header {
+            background: #2563EB !important;
+            border: 1.5px solid #1D4ED8 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+        }
+        .btn-auth-header:hover {
+            background: #1D4ED8 !important;
+        }
+
+        /* 로그아웃 알약 버튼 */
+        .btn-auth-logout {
+            background: #FEE2E2 !important;
+            border: 1.5px solid #FECACA !important;
+            color: #DC2626 !important;
+        }
+        .btn-auth-logout:hover {
+            background: #FCA5A5 !important;
+        }
+
+        /* 모드 토글 스위처 */
+        .mode-switcher-container {
+            background: #F1F5F9 !important;
+            border: 1.5px solid #E2E8F0 !important;
+            border-radius: 9999px !important;
+            padding: 3px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 3px !important;
+        }
+        .btn-mode {
+            border: none !important;
+            background: transparent !important;
+            color: #64748B !important;
+            height: 32px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 9999px !important;
+        }
+        .btn-mode.active {
+            background: #2563EB !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3) !important;
+        }
+
+        /* =========================================================
+           4. 일반 모드 메인 화면 전체 카드 화이트 모드 리뉴얼
+           ========================================================= */
+
+        /* 내 위치 / 우리집 주소 설정 카드 */
+        .start-location-card {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 16px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        }
+        .start-card-header {
+            border-bottom: 1px solid #F1F5F9 !important;
+        }
+        .start-title {
+            color: #0F172A !important;
+            font-weight: 800 !important;
+        }
+        .start-sub {
+            color: #2563EB !important;
+            font-weight: 700 !important;
+        }
+        .badge-gps-wait {
+            background: #FEF3C7 !important;
+            color: #92400E !important;
+            border: 1px solid #FDE68A !important;
+        }
+        .input-with-icon {
+            background: #F8FAFC !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 12px !important;
+        }
+        .input-with-icon input {
+            color: #0F172A !important;
+        }
+        .input-with-icon:focus-within {
+            background: #FFFFFF !important;
+            border-color: #2563EB !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+        .quick-chip-label {
+            color: #64748B !important;
+        }
+        .home-chip {
+            background: #F1F5F9 !important;
+            border: 1px solid #CBD5E1 !important;
+            color: #334155 !important;
+        }
+        .home-chip:hover {
+            background: #EFF6FF !important;
+            border-color: #93C5FD !important;
+            color: #1E40AF !important;
+        }
+        .start-card-tip {
+            background: #F0FDF4 !important;
+            border: 1px solid #BBF7D0 !important;
+            color: #166534 !important;
+        }
+
+        /* 목적지 검색창 */
+        .search-input-wrap {
+            background: #FFFFFF !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+        }
+        .search-input-wrap input {
+            color: #0F172A !important;
+        }
+        .search-input-wrap:focus-within {
+            border-color: #2563EB !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+        .btn-input-mic {
+            color: #475569 !important;
+        }
+
+        /* 동행 모드 칩 */
+        .mode-chip {
+            background: #FFFFFF !important;
+            border: 1px solid #CBD5E1 !important;
+            color: #475569 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        .mode-chip.active {
+            background: #2563EB !important;
+            border-color: #2563EB !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
+        }
+
+        /* 카테고리 필터 버튼 바 */
+        .cat-pill {
+            background: #FFFFFF !important;
+            border: 1px solid #CBD5E1 !important;
+            color: #334155 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        .cat-pill:hover {
+            background: #F8FAFC !important;
+            border-color: #94A3B8 !important;
+            color: #0F172A !important;
+        }
+        .cat-pill.active {
+            background: #2563EB !important;
+            border-color: #2563EB !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3) !important;
+        }
+
+        .btn-secondary-action {
+            background: #F1F5F9 !important;
+            border: 1px solid #CBD5E1 !important;
+            color: #1E293B !important;
+        }
+        .btn-secondary-action:hover {
+            background: #E2E8F0 !important;
+        }
+
+        /* GPS 미연동 배너 */
+        .gps-prompt-card {
+            background: #FFFFFF !important;
+            border: 1.5px dashed #38BDF8 !important;
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.08) !important;
+        }
+        .gps-prompt-title {
+            color: #0284C7 !important;
+        }
+        .gps-prompt-desc {
+            color: #64748B !important;
+        }
+
+        /* 추천 목적지 카드 그리드 */
+        .quick-dest-item {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        .quick-dest-item:hover {
+            background: #EFF6FF !important;
+            border-color: #93C5FD !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1) !important;
+        }
+        .quick-title {
+            color: #0F172A !important;
+        }
+        .quick-sub {
+            color: #64748B !important;
+        }
+
+        /* 텔레메트리 바 & 대시보드 패널 */
+        .telemetry-bar,
+        .panel-card,
+        .map-panel,
+        .canvas-panel,
+        .traffic-panel,
+        .tuning-panel,
+        .guardian-log-panel {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+            color: #0F172A !important;
+        }
+        .panel-title {
+            color: #0F172A !important;
+            font-weight: 800 !important;
+        }
+        .telem-label {
+            color: #64748B !important;
+        }
+        .telem-val {
+            color: #0F172A !important;
+            font-weight: 800 !important;
+        }
+
+        /* 지도 컨테이너 고화질 440px */
+        .map-view-box {
+            width: 100% !important;
+            height: 440px !important;
+            min-height: 400px !important;
+            background: #F1F5F9 !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 14px !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+        #realMapContainer {
+            width: 100% !important;
+            height: 100% !important;
+            position: relative !important;
+            z-index: 1 !important;
+            background: #F1F5F9 !important;
+        }
+    </style>
+
 </head>
 <body class="theme-white mode-general">
 
@@ -1433,6 +1856,6 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=4.0"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=8.0_pure_white"></script>
 </body>
 </html>
