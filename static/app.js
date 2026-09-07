@@ -175,6 +175,18 @@ const BleController = {
         }
     },
 
+    
+    selectBlindMode(enable, notify = true) {
+        this.blindEnabled = enable;
+        const btnOn = document.getElementById('btnSettingBlindOn');
+        const btnOff = document.getElementById('btnSettingBlindOff');
+        if (btnOn) btnOn.classList.toggle('active', enable);
+        if (btnOff) btnOff.classList.toggle('active', !enable);
+        if (notify) {
+            logEvent('[SETTING]', `시각장애인 안심 모드: [${enable ? 'ON' : 'OFF'}]`, 'info');
+        }
+    },
+
     openModal() {
         if (this.modalEl) {
             this.modalEl.style.display = 'flex';
@@ -555,6 +567,18 @@ const LeashController = {
         if (btnStop) btnStop.addEventListener('click', () => this.triggerHaptic('stop'));
     },
 
+    
+    selectBlindMode(enable, notify = true) {
+        this.blindEnabled = enable;
+        const btnOn = document.getElementById('btnSettingBlindOn');
+        const btnOff = document.getElementById('btnSettingBlindOff');
+        if (btnOn) btnOn.classList.toggle('active', enable);
+        if (btnOff) btnOff.classList.toggle('active', !enable);
+        if (notify) {
+            logEvent('[SETTING]', `시각장애인 안심 모드: [${enable ? 'ON' : 'OFF'}]`, 'info');
+        }
+    },
+
     openModal() {
         if (!this.modalEl) this.modalEl = document.getElementById('leashModal');
         if (this.modalEl) this.modalEl.style.display = 'flex';
@@ -873,6 +897,21 @@ const SettingManager = {
         });
 
         // 테마 선택 버튼 바인딩
+        
+        // 시각장애인 모드 설정 버튼 바인딩
+        const btnBlindOn = document.getElementById('btnSettingBlindOn');
+        const btnBlindOff = document.getElementById('btnSettingBlindOff');
+        if (btnBlindOn) {
+            btnBlindOn.addEventListener('click', () => {
+                this.selectBlindMode(true);
+            });
+        }
+        if (btnBlindOff) {
+            btnBlindOff.addEventListener('click', () => {
+                this.selectBlindMode(false);
+            });
+        }
+
         const btnWhite = document.getElementById('btnThemeWhite');
         const btnDark = document.getElementById('btnThemeDark');
         if (btnWhite) {
@@ -967,6 +1006,7 @@ const SettingManager = {
 
     selectTheme(theme, notify = true) {
         this.activeTheme = theme;
+
         const btnWhite = document.getElementById('btnThemeWhite');
         const btnDark = document.getElementById('btnThemeDark');
 
@@ -983,6 +1023,18 @@ const SettingManager = {
         localStorage.setItem('robodog_theme', theme);
         if (notify) {
             logEvent('[THEME]', `화면 테마가 [${theme === 'white' ? '☀️ 화이트 모드' : '🌙 다크 모드'}]로 전환되었습니다.`, 'info');
+        }
+    },
+
+    
+    selectBlindMode(enable, notify = true) {
+        this.blindEnabled = enable;
+        const btnOn = document.getElementById('btnSettingBlindOn');
+        const btnOff = document.getElementById('btnSettingBlindOff');
+        if (btnOn) btnOn.classList.toggle('active', enable);
+        if (btnOff) btnOff.classList.toggle('active', !enable);
+        if (notify) {
+            logEvent('[SETTING]', `시각장애인 안심 모드: [${enable ? 'ON' : 'OFF'}]`, 'info');
         }
     },
 
@@ -1011,6 +1063,7 @@ const SettingManager = {
 
         this.selectTheme(localStorage.getItem('robodog_theme') || 'white', false);
         this.selectVoice(VoiceEngine.isEnabled, false);
+        this.selectBlindMode(AppState.isBlindMode, false);
         this.modalEl.style.display = 'flex';
     },
 
@@ -1044,6 +1097,17 @@ const SettingManager = {
             VoiceEngine.toggleNarrator(this.voiceEnabled);
         }
 
+        // 2-2. [신규] 시각장애인 안심 모드 적용
+        if (typeof this.blindEnabled === 'boolean') {
+            AppState.isBlindMode = this.blindEnabled;
+            if (this.blindEnabled) {
+                document.body.classList.add('mode-blind');
+                VoiceEngine.toggleNarrator(true);
+            } else {
+                document.body.classList.remove('mode-blind');
+            }
+        }
+
         // 3. 사용자 프로필 동기화 및 로컬 저장
         let userObj = AuthManager.currentUser || { id: `local_${Date.now()}`, username: 'user' };
         userObj.name = name;
@@ -1052,6 +1116,9 @@ const SettingManager = {
         userObj.detail_address = detail_address;
         userObj.guardian_name = guardian_name;
         userObj.guardian_phone = guardian_phone;
+        if (typeof this.blindEnabled === 'boolean') {
+            userObj.is_blind = this.blindEnabled;
+        }
 
         AuthManager.setCurrentUser(userObj, false);
 
@@ -4327,7 +4394,7 @@ const BlindTouchManager = {
             badge.textContent = '📡 GPS 감지 대기 중 (화면을 탭하세요)';
         }
 
-        this.surfaceEl.style.display = 'flex';
+        this.surfaceEl.style.setProperty('display', 'flex', 'important');
 
         // 1. [요청사항] 시각장애인 모드에서는 내레이터 무조건 ON 활성화
         VoiceEngine.toggleNarrator(true);
@@ -4339,7 +4406,7 @@ const BlindTouchManager = {
     },
 
     handleScreenTouch() {
-        if (this.state === 'waiting_touch') {
+        if (this.state === 'waiting_touch' || this.state === 'idle') {
             this.state = 'navigating';
 
             if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
@@ -4377,7 +4444,7 @@ const BlindTouchManager = {
 
     cancel() {
         this.state = 'idle';
-        if (this.surfaceEl) this.surfaceEl.style.display = 'none';
+        if (this.surfaceEl) this.surfaceEl.style.setProperty('display', 'none', 'important');
         AppState.isWalking = false;
         BleController.sendPacket('CMD:STOP');
         VoiceEngine.speak('길안내가 종료되었습니다.', true);
@@ -4561,6 +4628,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {}
 
     logEvent('[SYSTEM]', 'RoboDog WAY GUIDE 시스템 가동...', 'info');
+
+    // 초기 로드 시 시각장애인 터치 서피스 강제 숨김 (첫 화면은 일반 화이트 화면)
+    const blindSurface = document.getElementById('blindTouchSurface');
+    if (blindSurface) blindSurface.style.setProperty('display', 'none', 'important');
+
 
     // 0. 내레이터 음성 초기화 및 토글 바인딩
     VoiceEngine.init();

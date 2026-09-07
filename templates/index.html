@@ -1545,7 +1545,7 @@
             height: 100vh !important;
             background: #000000 !important;
             z-index: 9998 !important;
-            display: flex !important;
+            display: none;
             align-items: center !important;
             justify-content: center !important;
             cursor: pointer !important;
@@ -1554,6 +1554,15 @@
             padding: 24px !important;
             box-sizing: border-box !important;
             animation: blindFadeIn 0.25s ease-out !important;
+        }
+
+        .blind-touch-surface[style*="display: none"],
+        .blind-touch-surface[style*="display:none"],
+        .blind-touch-surface.hidden,
+        .blind-touch-surface[hidden] {
+            display: none !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
         }
         @keyframes blindFadeIn {
             from { opacity: 0; transform: scale(0.98); }
@@ -1711,9 +1720,7 @@
                 <button id="btnGeneralMode" class="btn-mode active" title="일반 사용자 및 통합 관제 모드">
                     👤 일반 모드
                 </button>
-                <button id="btnBlindMode" class="btn-mode btn-mode-blind" title="시각장애인 안심 모드 (음성 안내 100% 자동 & 전체 화면 터치 내비게이션)">
-                    🦯 시각장애인 모드
-                </button>
+
             </div>
         </div>
     </header>
@@ -3056,6 +3063,34 @@
                             <label class="form-label" for="settingInputGuardianPhone">보호자 전화번호</label>
                             <input type="tel" id="settingInputGuardianPhone" placeholder="예: 010-1234-5678" class="form-input">
                         </div>
+                    </div>
+                </div>
+
+                
+                <!-- [신규] 3. 시각장애인 안심 보행 모드 설정 섹션 -->
+                <div class="setting-section">
+                    <div class="setting-section-header">
+                        <span class="ssh-icon">🦯</span>
+                        <span class="ssh-title">시각장애인 안심 보행 모드 (음성 100% & 전체 화면 터치 내비게이션)</span>
+                    </div>
+                    <div class="setting-notice-box">
+                        💡 <strong>시각장애인 모드 활성화 시:</strong> 내레이터 음성이 무조건 자동으로 켜지며, 목적지 출발 시 화면 전체가 원터치 GPS 감지 & 음성 길안내 버튼으로 작동합니다.
+                    </div>
+                    <div class="theme-select-row">
+                        <button type="button" id="btnSettingBlindOn" class="btn-theme-select">
+                            <span class="theme-icon">🦯</span>
+                            <div class="theme-txt">
+                                <span class="theme-main">시각장애인 모드 사용 (ON)</span>
+                                <span class="theme-desc">내레이터 자동 켜짐 + 전체 화면 원터치 음성 길안내 가동</span>
+                            </div>
+                        </button>
+                        <button type="button" id="btnSettingBlindOff" class="btn-theme-select active">
+                            <span class="theme-icon">👤</span>
+                            <div class="theme-txt">
+                                <span class="theme-main">일반 모드 사용 (OFF)</span>
+                                <span class="theme-desc">기본 대시보드 및 지도로 안내합니다</span>
+                            </div>
+                        </button>
                     </div>
                 </div>
 
