@@ -454,12 +454,22 @@
             height: 100vh !important;
             background: rgba(15, 23, 42, 0.55) !important;
             backdrop-filter: blur(8px) !important;
-            display: flex !important;
+            display: flex;
             align-items: center !important;
             justify-content: center !important;
             z-index: 9999 !important;
             padding: 16px !important;
             box-sizing: border-box !important;
+        }
+
+        /* [중요] 숨김 상태일 때 절대 클릭을 가로채지 않도록 강제 적용 */
+        .modal-overlay[style*="display: none"],
+        .modal-overlay[style*="display:none"],
+        .modal-overlay.hidden,
+        .modal-overlay[hidden] {
+            display: none !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
         }
 
         /* 설정창이 화면을 꽉 채우지 않도록 최적의 컴팩트 크기 지정 (최대 520px, 화면 높이의 85%) */
@@ -634,15 +644,41 @@
             font-weight: 700 !important;
             color: #64748B !important;
         }
+        .input-with-unit {
+            display: inline-flex !important;
+            align-items: center !important;
+            background: #F8FAFC !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 12px !important;
+            padding: 0 12px !important;
+            height: 42px !important;
+            box-sizing: border-box !important;
+        }
+        .input-with-unit .unit-prefix,
+        .input-with-unit .unit-suffix {
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            color: #475569 !important;
+            user-select: none !important;
+        }
         .input-with-unit input {
-            width: 48px !important;
+            width: 60px !important;
+            min-width: 60px !important;
             border: none !important;
             background: transparent !important;
             text-align: center !important;
-            font-size: 15px !important;
+            font-size: 17px !important;
             font-weight: 800 !important;
             outline: none !important;
             color: #0F172A !important;
+            -moz-appearance: textfield !important;
+            padding: 0 2px !important;
+            margin: 0 !important;
+        }
+        .input-with-unit input::-webkit-outer-spin-button,
+        .input-with-unit input::-webkit-inner-spin-button {
+            -webkit-appearance: none !important;
+            margin: 0 !important;
         }
 
         .setting-age-chips {
@@ -945,7 +981,7 @@
             <!-- [신규] 간편 모드 대형 방향 HUD -->
             <div id="seniorNavHudBox" class="senior-nav-hud" style="display: none;">
                 <span id="seniorNavIcon" class="senior-nav-icon">⬆️</span>
-                <span id="seniorNavText" class="senior-nav-text">120m 앞 성복2로 방면 직진</span>
+                <span id="seniorNavText" class="senior-nav-text">120m 앞 시청 방면 직진</span>
             </div>
 
             <div id="seniorMainStatusText" class="senior-main-status">
@@ -1059,7 +1095,7 @@
     <main id="generalView" class="view-container general-container" style="display: flex;">
         
         <!-- 1. [핵심 기능] 🏠 내 집 / 출발지 위치 직접 주소 입력 및 추천 설정 섹션 -->
-        <section class="start-location-section">
+        <section class="start-location-section" style="display: none;">
             <div class="start-location-card">
                 <div class="start-card-header">
                     <div class="start-header-left">
@@ -1230,7 +1266,7 @@
                                 <div id="navHudIcon" class="nav-hud-turn-icon">⬆️</div>
                                 <div class="nav-hud-details">
                                     <div class="nav-hud-next-dist" id="navHudNextDist">150m 앞</div>
-                                    <div class="nav-hud-instruction" id="navHudInstruction">성복2로 방면 직진</div>
+                                    <div class="nav-hud-instruction" id="navHudInstruction">시청 방면 직진</div>
                                 </div>
                             </div>
                             <div class="nav-hud-right">
@@ -2178,11 +2214,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="settingInputName">사용자 성함</label>
-                        <input type="text" id="settingInputName" placeholder="예: 우승윤" class="form-input">
+                        <input type="text" id="settingInputName" placeholder="성함을 입력하세요 (예: 홍길동)" class="form-input">
                     </div>
                     <div class="form-group address-autocomplete-group">
                         <label class="form-label" for="settingInputAddress">거주지(자택) 주소 (내비게이션 우리집 기준)</label>
-                        <input type="text" id="settingInputAddress" placeholder="도로명 또는 지번 주소 입력 (예: 성복2로 220)" class="form-input" autocomplete="off">
+                        <input type="text" id="settingInputAddress" placeholder="도로명 또는 지번 주소 입력 (예: 서울시 중구 세종대로 110)" class="form-input" autocomplete="off">
                         <!-- 주소 자동완성 추천 드롭다운 -->
                         <div id="settingSuggestBox" class="suggest-dropdown" style="display: none;">
                             <div id="settingSuggestList" class="suggest-list"></div>
@@ -2190,7 +2226,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="settingInputDetailAddress">상세 주소 (동/호수)</label>
-                        <input type="text" id="settingInputDetailAddress" placeholder="예: 힐스테이트 305동 1201호" class="form-input">
+                        <input type="text" id="settingInputDetailAddress" placeholder="상세 주소 (동/호수) (예: 101동 502호)" class="form-input">
                     </div>
                 </div>
 
@@ -2203,7 +2239,7 @@
                     <div class="form-row-half">
                         <div class="form-group">
                             <label class="form-label" for="settingInputGuardianName">보호자 성함 / 관계</label>
-                            <input type="text" id="settingInputGuardianName" placeholder="예: 스팸 (가족)" class="form-input">
+                            <input type="text" id="settingInputGuardianName" placeholder="보호자 성함 / 관계 (예: 홍길동 (보호자))" class="form-input">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="settingInputGuardianPhone">보호자 전화번호</label>

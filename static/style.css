@@ -1352,6 +1352,15 @@ body.mode-guardian .btn-mode.active {
     padding: 20px;
 }
 
+.modal-overlay[style*="display: none"],
+.modal-overlay[style*="display:none"],
+.modal-overlay.hidden,
+.modal-overlay[hidden] {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
 .modal-card {
     background: #18181B;
     border-radius: 20px;
@@ -3681,11 +3690,17 @@ body.mode-guardian .btn-mode.active {
     width: 60px;
     border: none;
     outline: none;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 900;
     color: #0F172A;
     text-align: center;
     background: transparent;
+    -moz-appearance: textfield;
+}
+.input-with-unit input::-webkit-outer-spin-button,
+.input-with-unit input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .setting-age-chips {

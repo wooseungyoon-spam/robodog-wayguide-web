@@ -24,6 +24,10 @@ logging.basicConfig(
 logger = logging.getLogger("RoboDogHub")
 
 app = Flask(__name__)
+
+# 초고속 실시간 응답을 위한 인메모리 캐시
+GEOCODE_CACHE = {}
+SUGGEST_CACHE = {}
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
@@ -89,12 +93,12 @@ def load_users():
                 "password": "123",
                 "name": "김순자",
                 "age": 73,
-                "address": "경기도 용인시 수지구 성복2로 220",
-                "detail_address": "성복자이 102동",
+                "address": "서울특별시 중구 세종대로 110",
+                "detail_address": "101동 502호",
                 "lat": 37.31520,
                 "lng": 127.07840,
                 "guardian_name": "이민수 (가족)",
-                "guardian_phone": "010-9876-5432",
+                "guardian_phone": "010-1234-5678",
                 "note": "완만한 경사로 위주 안내"
             }
         ]
@@ -106,7 +110,7 @@ def load_users():
             # 나이 기본값 보정
             for u in data:
                 if 'age' not in u:
-                    u['age'] = 73 if '순자' in u.get('name', '') else (28 if '우승윤' in u.get('name', '') else 68)
+                    u['age'] = 73 if '순자' in u.get('name', '') else 68
             return data
     except Exception as e:
         logger.error(f"[AUTH] 사용자 데이터 로드 실패: {e}")
@@ -385,6 +389,17 @@ def geocode_address():
     if not address:
         return jsonify({"status": "error", "message": "주소를 입력해 주세요."}), 400
 
+    # 1. 인메모리 캐시에서 즉시 반환 (< 0.1ms)
+    cache_key = address.strip().lower()
+    if cache_key in GEOCODE_CACHE:
+        cached = GEOCODE_CACHE[cache_key]
+        return jsonify({
+            "status": "success",
+            "lat": cached["lat"],
+            "lng": cached["lng"],
+            "display_name": cached["display_name"]
+        }), 200
+
     try:
         # 성복 2로 -> 성복2로 등 도로명 공백 정규화 시도
         queries = [address]
@@ -399,13 +414,14 @@ def geocode_address():
                 url,
                 headers={'User-Agent': 'RoboDogWayGuide/1.0 (robodog@mobility.ai)'}
             )
-            with urllib.request.urlopen(req, timeout=3.5) as response:
+            with urllib.request.urlopen(req, timeout=1.5) as response:
                 data = json.loads(response.read().decode('utf-8'))
                 if data and len(data) > 0:
                     first = data[0]
                     lat = round(float(first["lat"]), 6)
                     lng = round(float(first["lon"]), 6)
                     display_name = first.get("display_name", address)
+                    GEOCODE_CACHE[cache_key] = {"lat": lat, "lng": lng, "display_name": display_name}
                     logger.info(f"[GEOCODE] 주소 '{address}' -> Nominatim 성공: ({lat}, {lng})")
                     return jsonify({
                         "status": "success",
@@ -468,7 +484,7 @@ def geocode_address():
     }), 200
 
 RESIDENTIAL_DISTRICTS_DB = [
-    {"name": "수지 성복동 성복2로 220", "address": "경기도 용인시 수지구 성복2로 220", "lat": 37.31520, "lng": 127.07840, "tag": "용인 수지"},
+    {"name": "수지 성복동 성복2로 220", "address": "서울특별시 중구 세종대로 110", "lat": 37.31520, "lng": 127.07840, "tag": "용인 수지"},
     {"name": "수지 성복동 롯데캐슬", "address": "경기도 용인시 수지구 성복2로 51", "lat": 37.31340, "lng": 127.08120, "tag": "용인 수지"},
     {"name": "수지 풍덕천동 현대아파트", "address": "경기도 용인시 수지구 풍덕천동 680", "lat": 37.32520, "lng": 127.09840, "tag": "용인 수지"},
     {"name": "수지 신봉동 센트레빌", "address": "경기도 용인시 수지구 신봉1로 71", "lat": 37.32750, "lng": 127.08920, "tag": "용인 수지"},
@@ -498,8 +514,26 @@ def suggest_home_addresses():
             "results": RESIDENTIAL_DISTRICTS_DB[:6]
         }), 200
 
+    # 캐시 히트 시 즉시 반환
+    q_cache_key = q.strip().lower()
+    if q_cache_key in SUGGEST_CACHE:
+        return jsonify({
+            "status": "success",
+            "results": SUGGEST_CACHE[q_cache_key]
+        }), 200
+
     results = []
     seen = set()
+
+    # 1. 로컬 데이터베이스 초고속 우선 검색 (< 0.5ms)
+    q_lower = q.lower().replace(" ", "")
+    for item in RESIDENTIAL_DISTRICTS_DB:
+        item_name_norm = item["name"].lower().replace(" ", "")
+        item_addr_norm = item["address"].lower().replace(" ", "")
+        if (q_lower in item_name_norm or q_lower in item_addr_norm or q_lower in item["tag"].lower()):
+            if item["address"] not in seen:
+                seen.add(item["address"])
+                results.append(item)
 
     # 1. OpenStreetMap Nominatim 실시간 도로명/지번/건물번호 지오코딩 검색
     try:
@@ -515,7 +549,7 @@ def suggest_home_addresses():
                 url,
                 headers={'User-Agent': 'RoboDogWayGuide/1.0 (robodog@mobility.ai)'}
             )
-            with urllib.request.urlopen(req, timeout=2.8) as response:
+            with urllib.request.urlopen(req, timeout=1.5) as response:
                 data = json.loads(response.read().decode('utf-8'))
                 if data:
                     for item in data:
@@ -642,7 +676,7 @@ PLACES_DATABASE = [
     {"name": "광교산 등산로 입구", "category": "공원/산책로", "address": "경기도 용인시 수지구 신봉동 산 25", "lat": 37.33850, "lng": 127.07250},
 
     # [7] 용인시 수지구 - 주요 아파트 / 거주지 단지
-    {"name": "수지 성복동 성복2로 220", "category": "주거/우리집", "address": "경기도 용인시 수지구 성복2로 220", "lat": 37.31520, "lng": 127.07840},
+    {"name": "수지 성복동 성복2로 220", "category": "주거/우리집", "address": "서울특별시 중구 세종대로 110", "lat": 37.31520, "lng": 127.07840},
     {"name": "수지 성복동 롯데캐슬 골드타운", "category": "주거/우리집", "address": "경기도 용인시 수지구 성복2로 51", "lat": 37.31340, "lng": 127.08120},
     {"name": "수지 풍덕천동 현대아파트", "category": "주거/우리집", "address": "경기도 용인시 수지구 풍덕천동 680", "lat": 37.32520, "lng": 127.09840},
     {"name": "수지 신봉동 센트레빌", "category": "주거/우리집", "address": "경기도 용인시 수지구 신봉1로 71", "lat": 37.32750, "lng": 127.08920},
@@ -1118,7 +1152,7 @@ def ai_face_recognition():
             "matched": False,
             "confidence": 92.5,
             "landmarks_count": 68,
-            "user": {"name": "guest님", "address": "수지 성복2로 220"},
+            "user": {"name": "guest님", "address": "서울특별시 중구 세종대로 110"},
             "message": "등록되지 않은 사용자입니다. guest님으로 안내를 시작합니다."
         }), 200
 
@@ -1275,4 +1309,4 @@ if __name__ == '__main__':
     debug = os.getenv('FLASK_DEBUG', os.getenv('DEBUG', 'False')).lower() == 'true'
     
     logger.info(f"[ROBODOG] 서버를 시작합니다. http://{host}:{port}")
-    app.run(host=host, port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug, threaded=True)

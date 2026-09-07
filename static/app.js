@@ -1026,10 +1026,10 @@ const SettingManager = {
         const inputGuardPhone = document.getElementById('settingInputGuardianPhone');
 
         const ageVal = parseInt(inputAge?.value) || 28;
-        const name = inputName?.value.trim() || (AuthManager.currentUser?.name || '우승윤');
-        const address = inputAddr?.value.trim() || (AuthManager.currentUser?.address || '경기도 용인시 수지구 성복2로 220');
-        const detail_address = inputDet?.value.trim() || (AuthManager.currentUser?.detail_address || '힐스테이트 305동 1201호');
-        const guardian_name = inputGuardName?.value.trim() || '스팸 (가족)';
+        const name = inputName?.value.trim() || (AuthManager.currentUser?.name || '사용자');
+        const address = inputAddr?.value.trim() || (AuthManager.currentUser?.address || '서울특별시 중구 세종대로 110');
+        const detail_address = inputDet?.value.trim() || (AuthManager.currentUser?.detail_address || '101동 502호');
+        const guardian_name = inputGuardName?.value.trim() || '홍길동 (보호자)';
         const guardian_phone = inputGuardPhone?.value.trim() || '010-1234-5678';
 
         // 1. 만 나이 즉시 적용 및 영구 저장
