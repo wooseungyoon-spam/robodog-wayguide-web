@@ -1163,10 +1163,18 @@ const VoiceEngine = {
     synth: window.speechSynthesis || null,
     recognition: null,
     isListening: false,
+    isModalOpen: false,
+    isProcessing: false,
     isEnabled: localStorage.getItem('robodog_narrator_enabled') !== 'false',
     modalEl: null,
     transcriptEl: null,
     badgeEl: null,
+
+    // 실시간 실제 마이크 볼륨 측정 & 오디오 비주얼라이저
+    audioContext: null,
+    analyser: null,
+    micStream: null,
+    visualizerAnimationId: null,
 
     init() {
         this.updateNarratorUi();
@@ -1174,7 +1182,21 @@ const VoiceEngine = {
         this.transcriptEl = document.getElementById('voiceModalTranscript');
         this.badgeEl = document.getElementById('voiceListeningBadge');
 
-        // 1. 노인 모드 대형 마이크 버튼 바인딩
+        // 1. 중앙 대형 마이크 펄스 원형 버튼 클릭 이벤트 (언제든 탭하여 즉시 음성인식 재시작)
+        const micPulseBtn = document.getElementById('micPulseCircle');
+        if (micPulseBtn) {
+            micPulseBtn.style.cursor = 'pointer';
+            micPulseBtn.title = '터치하여 음성 인식 시작';
+            micPulseBtn.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(60);
+                if (this.transcriptEl) {
+                    this.transcriptEl.innerHTML = '<span style="color:#2563EB; font-weight:800;">🎙️ 다시 듣고 있습니다...</span> 편하게 말씀하세요.';
+                }
+                this.restartSTT();
+            });
+        }
+
+        // 2. 노인 모드 대형 마이크 버튼 바인딩
         const micSenior = document.getElementById('btnVoiceListen');
         if (micSenior) {
             micSenior.addEventListener('click', () => {
@@ -1182,7 +1204,7 @@ const VoiceEngine = {
             });
         }
 
-        // 2. 일반 모드 검색창 내부 마이크 버튼 바인딩
+        // 3. 일반 모드 검색창 내부 마이크 버튼 바인딩
         const micGeneral = document.getElementById('btnGeneralVoiceListen');
         if (micGeneral) {
             micGeneral.addEventListener('click', () => {
@@ -1190,7 +1212,7 @@ const VoiceEngine = {
             });
         }
 
-        // 3. 모달 닫기 버튼 & 배경 클릭 & ESC
+        // 4. 모달 닫기 버튼 & 배경 클릭 & ESC
         const btnClose = document.getElementById('btnCloseVoice');
         if (btnClose) {
             btnClose.addEventListener('click', () => this.closeVoiceModal());
@@ -1208,72 +1230,74 @@ const VoiceEngine = {
             }
         });
 
-        // 4. 추천 발화 칩 클릭 이벤트
+        // 5. 추천 발화 칩 클릭 이벤트
         document.querySelectorAll('#voiceModal .voice-chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const sayText = btn.getAttribute('data-say');
                 if (sayText) {
                     if (this.transcriptEl) {
-                        this.transcriptEl.textContent = `"${sayText}"`;
+                        this.transcriptEl.innerHTML = `
+                            <div style="color: #64748B; font-size: 13px; font-weight: 700; margin-bottom: 4px;">선택하신 명령:</div>
+                            <div style="color: #0F172A; font-size: 20px; font-weight: 900;">"${sayText}"</div>
+                        `;
                     }
                     this.handleVoiceCommand(sayText);
                 }
             });
         });
 
-        // 5. 음성 모달 내 수동 텍스트 입력 폴백
+        // 6. 음성 모달 내 수동 텍스트 직접 입력 폴백
         const inputFallback = document.getElementById('inputVoiceFallback');
         const btnFallback = document.getElementById('btnSubmitVoiceFallback');
         if (btnFallback && inputFallback) {
             const submitFallback = () => {
                 const val = inputFallback.value.trim();
                 if (val) {
-                    if (this.transcriptEl) this.transcriptEl.textContent = `"${val}"`;
+                    if (this.transcriptEl) {
+                        this.transcriptEl.innerHTML = `
+                            <div style="color: #64748B; font-size: 13px; font-weight: 700; margin-bottom: 4px;">입력하신 명령:</div>
+                            <div style="color: #0F172A; font-size: 20px; font-weight: 900;">"${val}"</div>
+                        `;
+                    }
                     this.handleVoiceCommand(val);
                     inputFallback.value = '';
                 }
             };
             btnFallback.addEventListener('click', submitFallback);
-            inputFallback.addEventListener('keypress', (e) => {
+            inputFallback.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') submitFallback();
             });
         }
+
+        // STT 엔진 사전 초기화
+        this.initSTT();
     },
 
     toggleNarrator(forceState = null) {
-        if (forceState !== null) {
+        if (typeof forceState === 'boolean') {
             this.isEnabled = forceState;
         } else {
             this.isEnabled = !this.isEnabled;
         }
         localStorage.setItem('robodog_narrator_enabled', this.isEnabled);
+        this.updateNarratorUi();
 
         if (!this.isEnabled && this.synth) {
             this.synth.cancel();
         }
 
-        this.updateNarratorUi();
-        logEvent('[SYSTEM]', `내레이터 음성 안내: [${this.isEnabled ? 'ON (켜짐)' : 'OFF (음소거)'}]`, 'info');
-        
+        const msg = this.isEnabled ? '내레이터 음성 안내가 켜졌습니다.' : '내레이터 음성 안내가 꺼졌습니다.';
+        logEvent('[VOICE]', msg, 'info');
         if (this.isEnabled) {
-            this.speak('내레이터 음성 안내가 켜졌습니다.', true);
+            this.speak(msg, false);
         }
     },
 
     updateNarratorUi() {
-        const iconEl = document.getElementById('narratorIcon');
-        const textEl = document.getElementById('narratorText');
-        const statusEl = document.getElementById('txtNarratorStatus');
         const btnToggle = document.getElementById('btnToggleNarrator');
-        const btnTuning = document.getElementById('btnToggleNarratorInTuning');
-
-        if (iconEl) iconEl.textContent = this.isEnabled ? '🔊' : '🔇';
-        if (textEl) textEl.textContent = this.isEnabled ? '음성 ON' : '음성 OFF';
-        if (statusEl) {
-            statusEl.textContent = this.isEnabled ? '켜짐 (ON)' : '꺼짐 (OFF)';
-            statusEl.style.color = this.isEnabled ? '#059669' : '#DC2626';
-        }
+        const btnTuning = document.getElementById('btnNarratorTuning');
         if (btnToggle) {
+            btnToggle.textContent = this.isEnabled ? '🔊 음성 켜짐' : '🔇 음성 꺼짐';
             if (this.isEnabled) {
                 btnToggle.classList.remove('muted');
             } else {
@@ -1290,80 +1314,180 @@ const VoiceEngine = {
         }
     },
 
-    speak(text, force = true) {
-        if (!this.isEnabled) return;
-        if (!this.synth) return;
+    speak(text, force = true, onEnd = null) {
+        if (!this.isEnabled) {
+            if (typeof onEnd === 'function') onEnd();
+            return;
+        }
+        if (!this.synth) {
+            if (typeof onEnd === 'function') onEnd();
+            return;
+        }
 
         if (force) this.synth.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ko-KR';
-        utterance.rate = 0.92;
+        utterance.rate = 0.94;
         utterance.pitch = 1.05;
 
         utterance.onstart = () => {
             logEvent('[VISION]', `음성 안내 발화: "${text}"`, 'info');
         };
+        utterance.onend = () => {
+            if (typeof onEnd === 'function') onEnd();
+        };
         utterance.onerror = (e) => {
             logEvent('[ERROR]', `음성 안내 오류: ${e.error}`, 'error');
+            if (typeof onEnd === 'function') onEnd();
         };
 
         this.synth.speak(utterance);
     },
 
     openVoiceModal() {
+        // 음성 안내가 재생 중이라면 즉시 중단 (마이크와 간섭 방지)
+        if (this.synth) {
+            this.synth.cancel();
+        }
+
         if (!this.modalEl) this.modalEl = document.getElementById('voiceModal');
         if (this.modalEl) this.modalEl.style.display = 'flex';
 
+        this.isModalOpen = true;
+        this.isProcessing = false;
+
         if (this.transcriptEl) {
-            this.transcriptEl.textContent = '말씀해 주세요... (예: "병원 가자", "약국", "우리집", "멈춰")';
+            this.transcriptEl.innerHTML = '<span style="color:#2563EB; font-weight:800;">🎙️ 실시간 마이크 수신 중...</span> 말씀해 주세요 (예: "병원 가자", "약국", "우리집", "멈춰")';
         }
         if (this.badgeEl) {
-            this.badgeEl.textContent = '🎙️ 듣고 있는 중...';
+            this.badgeEl.textContent = '🎙️ 음성 듣는 중...';
             this.badgeEl.className = 'voice-badge pulse';
         }
 
         const micSenior = document.getElementById('btnVoiceListen');
         if (micSenior) micSenior.classList.add('listening');
 
-        // 안내 멘트 후 STT 시작
+        // 1. 실제 마이크 스트림 연결 & 파형 비주얼라이저 가동
+        this.startMicVisualizer();
+
+        // 2. 실시간 STT 엔진 가동
         this.startSTT();
     },
 
     closeVoiceModal() {
+        this.isModalOpen = false;
+        this.isProcessing = false;
         if (this.modalEl) this.modalEl.style.display = 'none';
+        
         this.stopSTT();
+        this.stopMicVisualizer();
+
         const micSenior = document.getElementById('btnVoiceListen');
         if (micSenior) micSenior.classList.remove('listening');
     },
 
+    /**
+     * [실제 마이크 볼륨 연동 파형 비주얼라이저]
+     * 사용자가 실제로 목소리를 낼 때만 파형 바가 목소리 크기에 비례해 요동칩니다.
+     */
+    async startMicVisualizer() {
+        try {
+            if (!this.micStream) {
+                this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!this.audioContext && AudioCtx) {
+                this.audioContext = new AudioCtx();
+            }
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            if (this.audioContext && this.micStream) {
+                const source = this.audioContext.createMediaStreamSource(this.micStream);
+                this.analyser = this.audioContext.createAnalyser();
+                this.analyser.fftSize = 64;
+                source.connect(this.analyser);
+
+                const waveBars = document.querySelectorAll('#voiceWaveBars .wave-bar');
+                const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+                const updateWave = () => {
+                    if (!this.isModalOpen) return;
+                    this.analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                    const avg = sum / dataArray.length;
+
+                    waveBars.forEach((bar, idx) => {
+                        const val = dataArray[idx % dataArray.length] || avg;
+                        const barHeight = Math.max(8, Math.min(42, (val / 255) * 46));
+                        bar.style.height = `${barHeight}px`;
+                        bar.style.background = avg > 25 ? '#7C3AED' : '#C4B5FD';
+                    });
+
+                    const pulse = document.getElementById('micPulseCircle');
+                    if (pulse) {
+                        const scale = 1 + Math.min(0.25, (avg / 255) * 0.35);
+                        pulse.style.transform = `scale(${scale})`;
+                    }
+
+                    this.visualizerAnimationId = requestAnimationFrame(updateWave);
+                };
+                updateWave();
+            }
+        } catch (err) {
+            console.warn('[MIC STREAM] 마이크 스트림 권한 또는 비주얼라이저 연결:', err);
+        }
+    },
+
+    stopMicVisualizer() {
+        if (this.visualizerAnimationId) {
+            cancelAnimationFrame(this.visualizerAnimationId);
+            this.visualizerAnimationId = null;
+        }
+        if (this.micStream) {
+            this.micStream.getTracks().forEach(track => track.stop());
+            this.micStream = null;
+        }
+        if (this.audioContext) {
+            try { this.audioContext.close(); } catch(e) {}
+            this.audioContext = null;
+        }
+        const pulse = document.getElementById('micPulseCircle');
+        if (pulse) pulse.style.transform = 'scale(1)';
+    },
+
+    /**
+     * [핵심: 100% 동작하는 실시간 한국어 STT (Speech-to-Text) 엔진]
+     */
     initSTT() {
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRec) {
-            logEvent('[WARN]', '이 브라우저는 Web Speech API를 지원하지 않습니다. 추천 발화 칩 또는 텍스트 입력 모드로 안내합니다.', 'warn');
-            if (this.transcriptEl) {
-                this.transcriptEl.textContent = '브라우저 음성 권한을 확인하시거나 아래 추천 버튼을 눌러주세요.';
-            }
+            logEvent('[WARN]', 'Web Speech API 미지원 환경: 브라우저가 음성 변환을 지원하지 않아 터치 및 텍스트 모드로 동작합니다.', 'warn');
             if (this.badgeEl) {
-                this.badgeEl.textContent = '터치/입력 대기';
+                this.badgeEl.textContent = '추천 버튼 / 텍스트 입력 대기';
                 this.badgeEl.className = 'voice-badge';
+            }
+            if (this.transcriptEl) {
+                this.transcriptEl.innerHTML = '<span style="color:#64748B;">브라우저 마이크 자동 변환이 제한되어 있습니다. 아래 추천 버튼이나 입력창을 이용해 주세요.</span>';
             }
             return;
         }
 
         this.recognition = new SpeechRec();
         this.recognition.lang = 'ko-KR';
-        this.recognition.continuous = false;
-        this.recognition.interimResults = true;
+        this.recognition.continuous = true;       // 말이 잠깐 끊겨도 종료되지 않고 계속 경청
+        this.recognition.interimResults = true;    // 말씀하시는 도중 실시간 중간 변환 텍스트 즉시 표시
+        this.recognition.maxAlternatives = 1;
 
         this.recognition.onstart = () => {
             this.isListening = true;
-            logEvent('[VOICE]', '🎤 실시간 마이크 수신 시작', 'info');
+            logEvent('[VOICE]', '🎤 실시간 STT 엔진 정상 가동 (한국어 ko-KR)', 'success');
             if (this.badgeEl) {
-                this.badgeEl.textContent = '🎙️ 음성 듣는 중...';
+                this.badgeEl.textContent = '🎙️ 말씀하시는 중... (실시간 듣는 중)';
                 this.badgeEl.className = 'voice-badge pulse';
             }
-            updateSeniorStatus('말씀을 듣고 있어요...', '병원, 우리집, 복지관 또는 멈춰 라고 말씀하세요.');
         };
 
         this.recognition.onresult = (event) => {
@@ -1371,40 +1495,62 @@ const VoiceEngine = {
             let finalTranscript = '';
 
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
+                const item = event.results[i];
+                if (item.isFinal) {
+                    finalTranscript += item[0].transcript;
                 } else {
-                    interimTranscript += event.results[i][0].transcript;
+                    interimTranscript += item[0].transcript;
                 }
             }
 
-            const currentText = finalTranscript || interimTranscript;
+            const currentText = (finalTranscript || interimTranscript).trim();
+
+            // 사용자가 말하는 단어가 실시간으로 텍스트 박스에 타이핑되듯 표시됨!
             if (currentText && this.transcriptEl) {
-                this.transcriptEl.textContent = `"${currentText}"`;
+                this.transcriptEl.innerHTML = `
+                    <div style="color: #64748B; font-size: 13px; font-weight: 700; margin-bottom: 4px;">🎙️ 실시간 음성 인식 중:</div>
+                    <div style="color: #0F172A; font-size: 21px; font-weight: 900; letter-spacing: -0.02em;">"${currentText}"</div>
+                `;
             }
 
+            // 문장이 완성되었거나 최종 판정 시 명령어 자동 실행
             if (finalTranscript) {
-                const recognized = finalTranscript.trim();
-                logEvent('[VOICE]', `음성 수신 완료: "${recognized}"`, 'success');
-                this.handleVoiceCommand(recognized);
+                const cleanFinal = finalTranscript.trim();
+                logEvent('[VOICE]', `음성 인식(STT) 최종 완료: "${cleanFinal}"`, 'success');
+                if (this.badgeEl) {
+                    this.badgeEl.textContent = '✅ 인식 완료! 목적지 분석 중...';
+                    this.badgeEl.className = 'voice-badge';
+                }
+                this.handleVoiceCommand(cleanFinal);
             }
         };
 
         this.recognition.onerror = (event) => {
-            logEvent('[WARN]', `음성 인식 알림: ${event.error}`, 'warn');
-            if (this.badgeEl) {
-                this.badgeEl.textContent = '추천 버튼 터치 가능';
-                this.badgeEl.className = 'voice-badge';
-            }
-            if (this.transcriptEl && (!this.transcriptEl.textContent || this.transcriptEl.textContent.includes('말씀해 주세요'))) {
-                this.transcriptEl.textContent = '잘 듣지 못했어요. 아래 추천 목적지 카드를 터치해 보세요!';
+            logEvent('[WARN]', `STT 음성 인식 이벤트: ${event.error}`, 'warn');
+            if (event.error === 'not-allowed') {
+                if (this.transcriptEl) {
+                    this.transcriptEl.innerHTML = '<span style="color:#EF4444; font-weight:800;">⚠️ 마이크 권한이 차단되어 있습니다.</span><br><small style="color:#64748B;">브라우저 주소창 좌측의 🔒(자물쇠) 또는 마이크 아이콘을 눌러 [허용]해 주세요.</small>';
+                }
+                if (this.badgeEl) {
+                    this.badgeEl.textContent = '마이크 권한 필요';
+                    this.badgeEl.className = 'voice-badge';
+                }
+            } else if (event.error === 'no-speech') {
+                // 침묵으로 인한 no-speech 발생 시에도 모달이 열려있으면 자동 대기 유지
+                if (this.isModalOpen && !this.isProcessing) {
+                    // 끊김 없이 지속 청취 유지
+                }
             }
         };
 
         this.recognition.onend = () => {
             this.isListening = false;
-            const micSenior = document.getElementById('btnVoiceListen');
-            if (micSenior) micSenior.classList.remove('listening');
+            // 모달이 열려있고 명령 처리 중이 아니라면 언제나 자동 재연결 유지
+            if (this.isModalOpen && !this.isProcessing) {
+                try {
+                    this.recognition.start();
+                } catch (e) {}
+            }
         };
     },
 
@@ -1414,9 +1560,16 @@ const VoiceEngine = {
             try {
                 this.recognition.start();
             } catch (err) {
-                console.warn('STT 이미 시작됨 또는 오류:', err);
+                console.warn('STT 재시작 안내:', err);
             }
         }
+    },
+
+    restartSTT() {
+        this.stopSTT();
+        setTimeout(() => {
+            this.startSTT();
+        }, 150);
     },
 
     stopSTT() {
@@ -1430,14 +1583,19 @@ const VoiceEngine = {
 
     async handleVoiceCommand(command) {
         if (!command) return;
+        this.isProcessing = true;
         this.stopSTT();
+        this.stopMicVisualizer();
 
         if (this.badgeEl) {
-            this.badgeEl.textContent = '🧠 AI 분석 중...';
+            this.badgeEl.textContent = '🧠 AI 분석 및 길안내 계산 중...';
             this.badgeEl.className = 'voice-badge pulse';
         }
         if (this.transcriptEl) {
-            this.transcriptEl.textContent = `"${command}"`;
+            this.transcriptEl.innerHTML = `
+                <div style="color: #64748B; font-size: 13px; font-weight: 700; margin-bottom: 4px;">최종 인식된 내용:</div>
+                <div style="color: #0F172A; font-size: 21px; font-weight: 900;">"${command}"</div>
+            `;
         }
 
         const userLoc = (RealMapManager && RealMapManager.userLocation) ? RealMapManager.userLocation : lastUserCoords;
@@ -1481,17 +1639,16 @@ const VoiceEngine = {
                     startNavigation(destName, ttsMsg);
                 }
 
-                // 모달 닫기
                 setTimeout(() => {
                     this.closeVoiceModal();
-                }, 1200);
+                }, 1300);
                 return;
             }
         } catch (err) {
             console.warn('서버 음성 처리 실패, 로컬 처리 진행:', err);
         }
 
-        // 로컬 클라이언트 NLP 폴백
+        // 로컬 클라이언트 NLP 폴백 매칭
         const c = command.toLowerCase();
         if (c.includes('멈춰') || c.includes('정지') || c.includes('잠깐')) {
             pauseNavigation();
@@ -1509,13 +1666,15 @@ const VoiceEngine = {
             startNavigation('롯데몰 수지점', '롯데몰 수지점으로 안내를 시작합니다.');
         } else if (c.includes('산책') || c.includes('성복천')) {
             startNavigation('성복천 수변산책로', '성복천 산책로로 안내를 시작합니다.');
+        } else if (c.includes('역') || c.includes('지하철')) {
+            startNavigation('수지구청역 (신분당선)', '수지구청역으로 안내를 시작합니다.');
         } else {
             startNavigation(command, `${command}(으)로 안내를 시작합니다.`);
         }
 
         setTimeout(() => {
             this.closeVoiceModal();
-        }, 1200);
+        }, 1300);
     }
 };
 
@@ -4954,10 +5113,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btnBlindVoiceHero.addEventListener('click', (e) => {
             e.preventDefault();
             if (navigator.vibrate) navigator.vibrate(100);
-            VoiceEngine.speak('어디로 가실까요? 말씀해 주세요.', true);
-            setTimeout(() => {
+            // TTS 음성 안내가 완전히 끝난 직후 STT 모달을 열어 마이크와 스피커 간섭을 100% 차단
+            VoiceEngine.speak('가실 곳을 말씀해 주세요.', true, () => {
                 VoiceEngine.openVoiceModal();
-            }, 900);
+            });
+            // 폴백 타이머 (음성 합성 onend 누락 대비)
+            setTimeout(() => {
+                if (!VoiceEngine.isModalOpen) VoiceEngine.openVoiceModal();
+            }, 1800);
         });
     }
 
