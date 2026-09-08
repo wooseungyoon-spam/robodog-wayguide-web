@@ -3164,9 +3164,20 @@ const AutocompleteSearchManager = {
             `;
 
             item.addEventListener('click', () => {
-                this.inputEl.value = place.name;
+                const pName = place.place_name || place.name;
+                const pAddr = place.address_name || place.address;
+                const px = place.x || place.lng;
+                const py = place.y || place.lat;
+                this.inputEl.value = pName;
                 this.hideSuggestions();
-                startNavigation(place.name, `${place.name}으로 경로 안내를 시작합니다.`);
+                startNavigation(pName, `${pName}으로 경로 안내를 시작합니다.`, {
+                    place_name: pName,
+                    address_name: pAddr,
+                    x: px,
+                    y: py,
+                    lat: parseFloat(py),
+                    lng: parseFloat(px)
+                });
             });
 
             this.suggestListEl.appendChild(item);
@@ -3442,25 +3453,63 @@ const RealMapManager = {
         });
     },
 
-    async loadRoute(destName) {
+    async loadRoute(destName, targetCoords = null) {
         try {
             logEvent('[NAV]', `실제 도로망 도보 경로 검색 중 (목적지: ${destName})...`, 'info');
             let url = `/api/route/pedestrian?dest=${encodeURIComponent(destName)}`;
             if (this.userLocation && this.userLocation.lat && this.userLocation.lng) {
                 url += `&start_lat=${this.userLocation.lat}&start_lng=${this.userLocation.lng}`;
             }
+            if (targetCoords && targetCoords.lat && targetCoords.lng) {
+                url += `&dest_lat=${targetCoords.lat}&dest_lng=${targetCoords.lng}`;
+            }
             const res = await fetch(url);
             const data = await res.json();
             
-            if (data.status === 'success') {
-                this.currentRoute = data.route;
+            if (res.status === 404 || data.status === 'error' || !data.route) {
+                alert('해당 장소를 찾을 수 없습니다.');
+                logEvent('[NAV]', `도보 경로 탐색 실패: 해당 장소를 찾을 수 없습니다. (${destName})`, 'error');
+                return;
+            }
+
+            if (data.status === 'success' || data.features) {
+                const routeData = data.route || data;
+                this.currentRoute = routeData;
                 this.currentWaypointIndex = 0;
                 this.currentStepIndex = 0;
-                AppState.distanceRemaining = this.currentRoute.total_distance_m;
+                AppState.distanceRemaining = this.currentRoute.total_distance_m || 0;
 
-                // 횡단보도/신호등 목록 즉시 동기화
-                const signals = this.currentRoute.trafficSignals || this.currentRoute.crosswalks || [];
-                this.activeCrosswalks = signals;
+                // [사용자 강제 지침 1:1 구현] 도보 경로 내 횡단보도(신호등) 100% 자동 추출
+                const crosswalkSignals = (routeData.features || [])
+                  .filter(feature => {
+                    const isPoint = feature.geometry && feature.geometry.type === "Point";
+                    const desc = (feature.properties && feature.properties.description) || "";
+                    const facility = feature.properties && feature.properties.facilityType;
+                    return isPoint && (desc.includes("횡단보도") || facility === "1" || facility === "2");
+                  })
+                  .map((feature, index) => ({
+                    id: `signal_${index + 1}`,
+                    name: (feature.properties && feature.properties.description) || `횡단보도 ${index + 1}`,
+                    coords: feature.geometry.coordinates,
+                    offset: index * 25
+                  }));
+
+                // 추출된 신호등 정보를 실시간 신호 제어 엔진에 즉시 연동
+                const mappedSignals = crosswalkSignals.map((sig, idx) => ({
+                    id: sig.id,
+                    name: sig.name,
+                    lat: sig.coords[1],
+                    lng: sig.coords[0],
+                    coords: sig.coords,
+                    cycleSec: 120,
+                    greenSec: 30,
+                    redSec: 90,
+                    blinkSec: 8,
+                    offset: sig.offset
+                }));
+
+                this.activeCrosswalks = mappedSignals;
+                TrafficSignalEngine.setSignals(this.activeCrosswalks);
                 
                 const routeTypeMsg = this.currentRoute.is_real_road_routed ? "실제 보행자 도로망(OSRM)" : "표준 안전 보행로";
                 logEvent('[NAV]', `도보 경로 수신 [${routeTypeMsg}]: "${this.currentRoute.destination}" (총 ${this.currentRoute.total_distance_m}m, 🚦 신호등 ${this.activeCrosswalks.length}개 C-ITS 관제 가동)`, 'success');
@@ -3499,10 +3548,6 @@ const RealMapManager = {
                     
                     // 1. 기존 횡단보도 신호등 마커 전부 초기화
                     this.clearCrosswalkMarkers();
-
-                    // 2. 경로 상에서 추출된 모든 횡단보도(신호등) 목록 추출
-                    const signals = this.currentRoute.trafficSignals || this.currentRoute.crosswalks || [];
-                    this.activeCrosswalks = signals;
 
                     const intersectionNameEl = document.getElementById('signalIntersectionName');
                     const actionTextEl = document.getElementById('signalActionText');
@@ -4789,12 +4834,23 @@ const AllPlacesModalManager = {
 
             item.addEventListener('click', () => {
                 this.close();
+                const pName = place.place_name || place.name;
+                const pAddr = place.address_name || place.address;
+                const px = place.x || place.lng;
+                const py = place.y || place.lat;
                 const searchInput = document.getElementById('inputGeneralSearch');
-                if (searchInput) searchInput.value = place.name;
+                if (searchInput) searchInput.value = pName;
                 const ttsMsg = AppState.currentMode === 'senior' 
-                    ? `${place.name}(으)로 안내를 시작합니다. 저를 따라오세요.`
+                    ? `${pName}(으)로 안내를 시작합니다. 저를 따라오세요.`
                     : null;
-                startNavigation(place.name, ttsMsg);
+                startNavigation(pName, ttsMsg, {
+                    place_name: pName,
+                    address_name: pAddr,
+                    x: px,
+                    y: py,
+                    lat: parseFloat(py),
+                    lng: parseFloat(px)
+                });
             });
 
             this.listEl.appendChild(item);
@@ -4916,32 +4972,84 @@ const BlindTouchManager = {
     }
 };
 
-function startNavigation(destName, ttsMessage) {
-    if (AppState.currentMode === 'blind' || AppState.isBlindMode) {
-        BlindTouchManager.startGuide(destName);
+async function startNavigation(destName, ttsMessage, explicitCoords = null) {
+    if (!destName || !destName.trim()) {
+        alert('해당 장소를 찾을 수 없습니다.');
         return;
     }
-    AppState.currentDest = destName;
+
+    let targetPlace = explicitCoords;
+
+    // 만약 사전에 검증된 좌표가 없다면, 공식 POI 검색 API(/api/places/search)를 호출하여 1:1 검증
+    if (!targetPlace || !targetPlace.lat || !targetPlace.lng) {
+        try {
+            logEvent('[NAV]', `공식 POI 검색 API 호출 중: [${destName}]...`, 'info');
+            const loc = RealMapManager.userLocation;
+            let searchUrl = `/api/places/search?q=${encodeURIComponent(destName.trim())}`;
+            if (loc && loc.lat && loc.lng) {
+                searchUrl += `&lat=${loc.lat}&lng=${loc.lng}`;
+            }
+            const res = await fetch(searchUrl);
+            const data = await res.json();
+            
+            if (!data.results || data.results.length === 0) {
+                alert('해당 장소를 찾을 수 없습니다.');
+                logEvent('[NAV]', `검색 결과 없음: [${destName}] - 탐색 즉시 종료`, 'error');
+                return;
+            }
+
+            // 검색 결과에서 API가 반환한 place_name, address_name, x(경도), y(위도)만 변수에 저장하고 화면에 표시
+            const firstResult = data.results[0];
+            targetPlace = {
+                place_name: firstResult.place_name || firstResult.name,
+                address_name: firstResult.address_name || firstResult.address,
+                x: parseFloat(firstResult.x || firstResult.lng),
+                y: parseFloat(firstResult.y || firstResult.lat),
+                lat: parseFloat(firstResult.y || firstResult.lat),
+                lng: parseFloat(firstResult.x || firstResult.lng)
+            };
+        } catch (err) {
+            logEvent('[ERROR]', `POI 검색 실패: ${err.message}`, 'error');
+            alert('해당 장소를 찾을 수 없습니다.');
+            return;
+        }
+    }
+
+    const verifiedName = targetPlace.place_name || destName;
+    const verifiedAddr = targetPlace.address_name || '';
+
+    // 화면 입력창 및 상태 동기화 (API 반환 데이터만 표시)
+    const inputGen = document.getElementById('inputGeneralSearch');
+    if (inputGen) inputGen.value = verifiedName;
+
+    if (AppState.currentMode === 'blind' || AppState.isBlindMode) {
+        BlindTouchManager.startGuide(verifiedName);
+        return;
+    }
+
+    AppState.currentDest = verifiedName;
+    AppState.currentAddress = verifiedAddr;
+    AppState.currentDestCoords = targetPlace;
     AppState.isWalking = true;
-    logEvent('[NAV]', `목적지 설정 완료: [${destName}] 도보 안내 가동`, 'success');
+    logEvent('[NAV]', `목적지 설정 완료: [${verifiedName}] (${verifiedAddr}) 도보 안내 가동`, 'success');
     
     updateSeniorStatus(
-        `🐕 ${destName}(으)로 안전하게 모시는 중입니다.`,
-        '보폭에 맞추어 서행 중입니다. 신호등과 주변을 살피고 있어요.',
+        `🐕 ${verifiedName}(으)로 안전하게 모시는 중입니다.`,
+        verifiedAddr ? `[${verifiedAddr}] 방면 인도 보행 중` : '보폭에 맞추어 서행 중입니다. 신호등과 주변을 살피고 있어요.',
         '안전 보행 중'
     );
     
     const genBadge = document.getElementById('generalWalkBadge');
     if (genBadge) {
         genBadge.className = 'badge badge-green';
-        genBadge.textContent = `${destName} 동행 중`;
+        genBadge.textContent = `${verifiedName} 동행 중`;
     }
 
-    BleController.sendPacket(`CMD:START:DEST=${destName}`);
+    BleController.sendPacket(`CMD:START:DEST=${verifiedName}`);
     if (typeof LeashController !== 'undefined') {
         LeashController.triggerHaptic('forward');
     }
-    RealMapManager.loadRoute(destName);
+    RealMapManager.loadRoute(verifiedName, targetPlace);
     
     // 어르신 모드일 때만 음성 안내 출력
     if (AppState.currentMode === 'senior' && ttsMessage) {
@@ -5269,14 +5377,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnGenSearch = document.getElementById('btnGeneralSearch');
     const inputGenSearch = document.getElementById('inputGeneralSearch');
     if (btnGenSearch && inputGenSearch) {
-        btnGenSearch.addEventListener('click', () => {
-            const query = inputGenSearch.value.trim() || '수지구청역 (신분당선)';
+        const doSearch = () => {
+            const query = inputGenSearch.value.trim();
+            if (!query) {
+                alert('해당 장소를 찾을 수 없습니다.');
+                return;
+            }
             startNavigation(query, null);
-        });
+        };
+        btnGenSearch.addEventListener('click', doSearch);
         inputGenSearch.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                const query = inputGenSearch.value.trim() || '수지구청역 (신분당선)';
-                startNavigation(query, null);
+                doSearch();
             }
         });
     }
