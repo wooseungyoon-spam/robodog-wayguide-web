@@ -3457,12 +3457,16 @@ const RealMapManager = {
                 this.currentWaypointIndex = 0;
                 this.currentStepIndex = 0;
                 AppState.distanceRemaining = this.currentRoute.total_distance_m;
+
+                // 횡단보도/신호등 목록 즉시 동기화
+                const signals = this.currentRoute.trafficSignals || this.currentRoute.crosswalks || [];
+                this.activeCrosswalks = signals;
                 
                 const routeTypeMsg = this.currentRoute.is_real_road_routed ? "실제 보행자 도로망(OSRM)" : "표준 안전 보행로";
-                logEvent('[NAV]', `도보 경로 수신 [${routeTypeMsg}]: "${this.currentRoute.destination}" (총 ${this.currentRoute.total_distance_m}m, 🚦 신호등 ${this.activeCrosswalks.length}개 전수 조사 및 관제 연동 완료)`, 'success');
+                logEvent('[NAV]', `도보 경로 수신 [${routeTypeMsg}]: "${this.currentRoute.destination}" (총 ${this.currentRoute.total_distance_m}m, 🚦 신호등 ${this.activeCrosswalks.length}개 C-ITS 관제 가동)`, 'success');
                 
                 const badge = document.getElementById('mapRouteStatus');
-                if (badge) badge.textContent = `🚶 인도자 보행길: ${destName} (${this.currentRoute.total_distance_m}m · 🚦 신호등 ${this.activeCrosswalks.length}개 전수 관제)`;
+                if (badge) badge.textContent = `🚶 인도자 보행길: ${destName} (${this.currentRoute.total_distance_m}m · 🚦 신호등 ${this.activeCrosswalks.length}개 관제)`;
 
                 // 실제 도로 좌표열 지도 렌더링
                 if (this.map && this.currentRoute.waypoints && this.currentRoute.waypoints.length > 0) {
