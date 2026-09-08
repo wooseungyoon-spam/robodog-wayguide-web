@@ -1,3 +1,20 @@
+
+# -------------------------------------------------------------
+# [보행자 전용 네비게이션 필터] 고속도로, 자동차전용도로 100% 원천 차단
+# -------------------------------------------------------------
+FORBIDDEN_CAR_ROADS = [
+    "고속도로", "고속화도로", "경부", "용인서울", "분당수서", "외곽순환",
+    "도시고속", "포은대로(고가)", "신갈jc", "판교jc", "motorway", "trunk", "expressway"
+]
+
+def sanitize_pedestrian_road(road_name):
+    if not road_name:
+        return "인도 안전 보행로"
+    clean = road_name.lower().replace(" ", "")
+    for f in FORBIDDEN_CAR_ROADS:
+        if f in clean:
+            return "인도 및 보행자 전용로 (자동차 통행 금지)"
+    return road_name
 import os
 import sys
 import time
@@ -949,19 +966,21 @@ def get_pedestrian_route():
                     m_type = maneuver.get("type", "turn")
                     m_mod = maneuver.get("modifier", "straight")
                     step_dist = round(step.get("distance", 0))
-                    step_road = step.get("name") or "보행로"
+                    raw_road = step.get("name") or "보행로"
+                    # 고속도로/자동차전용도로 전면 배제 및 인도 안전 명칭 치환
+                    step_road = sanitize_pedestrian_road(raw_road)
                     
                     icon = icon_korean.get(m_type) or icon_korean.get(m_mod) or "⬆️"
                     direction_text = turn_korean.get(m_mod, "직진")
 
                     if m_type == "depart":
-                        instruction = f"{step_road} 방면으로 도보 출발"
+                        instruction = f"{step_road} 따라 안전 도보 출발"
                         icon = "🚶"
                     elif m_type == "arrive":
                         instruction = f"목적지 [{dest_title}] 도착"
                         icon = "🎯"
                     else:
-                        instruction = f"{step_road}에서 {direction_text}"
+                        instruction = f"{step_road} 방면으로 {direction_text} (인도 보행)"
 
                     nav_steps.append({
                         "step_index": step_idx,

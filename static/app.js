@@ -301,11 +301,16 @@ const BleController = {
 
         } catch (error) {
             if (error.name === 'NotFoundError') {
-                this.logTerminal('블루투스 검색 창이 취소되었습니다.', 'warn');
+                this.logTerminal('블루투스 기기 검색 창이 취소되었습니다. (연결되지 않음)', 'warn');
+                logEvent('[BLE]', '블루투스 검색이 취소되었습니다. (미연결 상태 유지)', 'info');
+                this.updateUiState(false, '연결 취소됨', '미연결');
+                return; // 사용자가 취소(X)를 눌렀을 때는 가상 모드로 자동 연결하지 않음
             } else {
-                this.logTerminal(`BLE 연결 예외 (${error.message}) -> [가상 BLE 모드] 실행`, 'err');
+                this.logTerminal(`BLE 연결 오류 (${error.message})`, 'err');
+                logEvent('[BLE]', `BLE 연결 실패: ${error.message}`, 'error');
+                this.updateUiState(false, '연결 실패', '미연결');
+                return;
             }
-            this.enableMockMode();
         }
     },
 
@@ -1165,7 +1170,12 @@ const VoiceEngine = {
     isListening: false,
     isModalOpen: false,
     isProcessing: false,
-    isEnabled: localStorage.getItem('robodog_narrator_enabled') !== 'false',
+    isEnabled: (function() {
+        const stored = localStorage.getItem('robodog_narrator_enabled');
+        if (stored !== null) return stored === 'true';
+        const age = parseInt(localStorage.getItem('robodog_user_age') || '28');
+        return age >= 60; // 만 60세 미만은 기본 비설정(OFF), 만 60세 이상만 기본 ON
+    })(),
     modalEl: null,
     transcriptEl: null,
     badgeEl: null,
@@ -1954,9 +1964,13 @@ const AuthManager = {
         if (switcherContainerEl) switcherContainerEl.style.setProperty('display', 'inline-flex', 'important');
 
         if (!isEligible) {
-            logEvent('[AGE]', `현재 만 ${val}세로 설정되었습니다. 일반/노인/시각장애인 모드를 상단에서 언제든 전환하실 수 있습니다.`, 'info');
+            if (!AppState.isBlindMode) {
+                VoiceEngine.toggleNarrator(false);
+                logEvent('[AGE]', `만 ${val}세 (만 60세 미만): 내레이터 음성 안내(TTS)가 기본 꺼짐(OFF)으로 설정되었습니다.`, 'info');
+            }
         } else {
-            logEvent('[AGE]', `👵 만 ${val}세 어르신 확인 완료! [노인 모드]와 [일반 모드], [시각장애인 모드]를 자유롭게 이용하실 수 있습니다.`, 'success');
+            VoiceEngine.toggleNarrator(true);
+            logEvent('[AGE]', `👵 만 ${val}세 어르신 확인 완료! [노인 안심 모드] 및 내레이터 음성 안내(TTS)가 활성화되었습니다.`, 'success');
         }
 
         // 4. 백엔드 동기화
