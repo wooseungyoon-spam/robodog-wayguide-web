@@ -3462,19 +3462,19 @@ const RealMapManager = {
                 logEvent('[NAV]', `도보 경로 수신 [${routeTypeMsg}]: "${this.currentRoute.destination}" (총 ${this.currentRoute.total_distance_m}m, 약 ${this.currentRoute.estimated_time_min}분)`, 'success');
                 
                 const badge = document.getElementById('mapRouteStatus');
-                if (badge) badge.textContent = `${destName} (${this.currentRoute.total_distance_m}m · 약 ${this.currentRoute.estimated_time_min}분)`;
+                if (badge) badge.textContent = `🚶 인도자 보행길: ${destName} (${this.currentRoute.total_distance_m}m · 약 ${this.currentRoute.estimated_time_min}분)`;
 
                 // 실제 도로 좌표열 지도 렌더링
                 if (this.map && this.currentRoute.waypoints && this.currentRoute.waypoints.length > 0) {
                     const latlngs = this.currentRoute.waypoints.map(wp => [wp.lat, wp.lng]);
                     
-                    // 고대비 네비게이션 블루 라인
+                    // [인도자 전용] 안심 에메랄드 보행 점선 라인 (차도 주행선과 시각적 완전 차별화)
                     this.polyline.setLatLngs(latlngs);
                     this.polyline.setStyle({
-                        color: '#2563EB',
+                        color: '#10B981', // 안심 보행자 그린 (네이버/카카오 도보 전용 컬러)
                         weight: 6,
-                        opacity: 0.9,
-                        dashArray: null
+                        opacity: 0.95,
+                        dashArray: '8, 8' // 인도 보행자 발걸음 점선 스타일
                     });
 
                     this.roboMarker.setLatLng(latlngs[0]);

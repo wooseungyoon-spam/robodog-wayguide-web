@@ -831,6 +831,47 @@ def search_places():
 # -------------------------------------------------------------
 # 4. 실제 도로망 기반 보행자 도보 내비게이션 API (OSRM Foot Routing)
 # -------------------------------------------------------------
+
+def offset_to_pedestrian_sidewalk(coords, offset_m=6.0):
+    """
+    [핵심: 인도자 전용 내비게이션 보정 알고리즘]
+    자동차 차도 중앙선(Centerline)으로 추출된 좌표열을 실제 사람이 걷는 도로변 인도(보도블록) 구역으로
+    법선 벡터(Normal Vector)를 이용해 6.0m 오프셋 이동시킵니다.
+    """
+    if not coords or len(coords) < 2:
+        return coords
+    
+    sidewalk_coords = []
+    for i in range(len(coords)):
+        if i == 0:
+            dx = coords[1][0] - coords[0][0]
+            dy = coords[1][1] - coords[0][1]
+        elif i == len(coords) - 1:
+            dx = coords[-1][0] - coords[-2][0]
+            dy = coords[-1][1] - coords[-2][1]
+        else:
+            dx = coords[i+1][0] - coords[i-1][0]
+            dy = coords[i+1][1] - coords[i-1][1]
+        
+        lat = coords[i][1]
+        dx_m = dx * 111111 * math.cos(math.radians(lat))
+        dy_m = dy * 111111
+        length = math.hypot(dx_m, dy_m)
+        
+        if length < 1e-6:
+            sidewalk_coords.append(coords[i])
+            continue
+            
+        # 도로 진행 방향의 우측 인도(보행로) 방향 법선 단위 벡터
+        nx = dy_m / length
+        ny = -dx_m / length
+        
+        off_lng = (nx * offset_m) / (111111 * math.cos(math.radians(lat)))
+        off_lat = (ny * offset_m) / 111111
+        
+        sidewalk_coords.append([round(coords[i][0] + off_lng, 6), round(coords[i][1] + off_lat, 6)])
+    return sidewalk_coords
+
 @app.route('/api/route/pedestrian', methods=['GET'])
 def get_pedestrian_route():
     """실제 보행자 도로망(OSRM) 기반 도보 내비게이션 경로 및 턴바이턴 안내 생성"""
@@ -921,13 +962,15 @@ def get_pedestrian_route():
                 total_dist = round(best_route.get("distance", 0))
                 estimated_time = max(1, round(total_dist / 65))
                 raw_coords = best_route["geometry"]["coordinates"]
+                # [인도자 모드] 차도 중앙선 좌표를 사람이 다니는 인도(보도블록)로 6.0m 오프셋 변환
+                sidewalk_coords = offset_to_pedestrian_sidewalk(raw_coords, offset_m=6.0)
 
-                # 좌표열 변환 (실제 도로 굴곡 반영)
-                for idx, coord in enumerate(raw_coords):
+                # 보행자 전용 인도 좌표열 생성
+                for idx, coord in enumerate(sidewalk_coords):
                     wp = {
                         "lat": round(coord[1], 6),
                         "lng": round(coord[0], 6),
-                        "name": f"도보 경로점 {idx + 1}"
+                        "name": f"인도 안전 보행점 {idx + 1}"
                     }
                     if idx == 0:
                         wp["name"] = "출발: 현위치"
