@@ -1666,8 +1666,18 @@ const VoiceEngine = {
             startNavigation('롯데몰 수지점', '롯데몰 수지점으로 안내를 시작합니다.');
         } else if (c.includes('산책') || c.includes('성복천')) {
             startNavigation('성복천 수변산책로', '성복천 산책로로 안내를 시작합니다.');
+        } else if (c.includes('성복역') || (c.includes('성복') && c.includes('역'))) {
+            startNavigation('성복역 (신분당선)', '성복역으로 안내를 시작합니다. 안전하게 걸어가요.');
+        } else if (c.includes('수지구청역') || (c.includes('수지구청') && c.includes('역'))) {
+            startNavigation('수지구청역 (신분당선)', '수지구청역으로 안내를 시작합니다. 안전하게 걸어가요.');
+        } else if (c.includes('동천역')) {
+            startNavigation('동천역 (신분당선)', '동천역으로 안내를 시작합니다.');
+        } else if (c.includes('상현역')) {
+            startNavigation('상현역 (신분당선)', '상현역으로 안내를 시작합니다.');
+        } else if (c.includes('죽전역')) {
+            startNavigation('죽전역 (수인분당선)', '죽전역으로 안내를 시작합니다.');
         } else if (c.includes('역') || c.includes('지하철')) {
-            startNavigation('수지구청역 (신분당선)', '수지구청역으로 안내를 시작합니다.');
+            startNavigation('성복역 (신분당선)', '성복역으로 안내를 시작합니다.');
         } else {
             startNavigation(command, `${command}(으)로 안내를 시작합니다.`);
         }
@@ -5008,12 +5018,13 @@ function switchMode(targetMode) {
     if (blindView) blindView.style.setProperty('display', 'none', 'important');
 
     const theme = localStorage.getItem('robodog_theme') || 'white';
+    document.body.classList.remove('theme-white', 'theme-dark');
+    document.body.classList.add(theme === 'dark' ? 'theme-dark' : 'theme-white');
 
     if (targetMode === 'senior') {
         AppState.isBlindMode = false;
         document.body.classList.remove('mode-general', 'mode-guardian', 'mode-blind');
         document.body.classList.add('mode-senior');
-        if (theme === 'white') document.body.classList.add('theme-white');
         if (btnSenior) btnSenior.classList.add('active');
         if (seniorView) seniorView.style.setProperty('display', 'flex', 'important');
 
@@ -5025,7 +5036,6 @@ function switchMode(targetMode) {
         AppState.isBlindMode = false;
         document.body.classList.remove('mode-senior', 'mode-guardian', 'mode-blind');
         document.body.classList.add('mode-general');
-        if (theme === 'white') document.body.classList.add('theme-white');
         if (btnGeneral) btnGeneral.classList.add('active');
         if (generalView) generalView.style.setProperty('display', 'flex', 'important');
 

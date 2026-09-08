@@ -821,12 +821,25 @@ def get_pedestrian_route():
     start_lat = request.args.get('start_lat', type=float)
     start_lng = request.args.get('start_lng', type=float)
     
-    # 1. 목적지 좌표 탐색
+    # 1. 목적지 좌표 탐색 (성복역과 수지구청역 등 개별 역명 우선 분기)
     target_place = None
-    for place in PLACES_DATABASE:
-        if dest_name in place["name"] or place["name"] in dest_name:
-            target_place = place
-            break
+    clean_d = dest_name.replace(" ", "").lower()
+    if "성복" in clean_d and "역" in clean_d:
+        target_place = next((p for p in PLACES_DATABASE if "성복역" in p["name"]), None)
+    elif "수지구청" in clean_d and "역" in clean_d:
+        target_place = next((p for p in PLACES_DATABASE if "수지구청역" in p["name"]), None)
+    elif "동천" in clean_d and "역" in clean_d:
+        target_place = next((p for p in PLACES_DATABASE if "동천역" in p["name"]), None)
+    elif "상현" in clean_d and "역" in clean_d:
+        target_place = next((p for p in PLACES_DATABASE if "상현역" in p["name"]), None)
+    elif "죽전" in clean_d and "역" in clean_d:
+        target_place = next((p for p in PLACES_DATABASE if "죽전역" in p["name"]), None)
+
+    if not target_place:
+        for place in PLACES_DATABASE:
+            if dest_name in place["name"] or place["name"] in dest_name:
+                target_place = place
+                break
 
     if target_place:
         base_lat = target_place["lat"]
@@ -1228,16 +1241,28 @@ def process_voice_command():
         "카페/음식점": ["카페", "커피", "스타벅스", "빵집", "식당"]
     }
 
-    # 4. 전체 68+ 목적지 중 이름 직접 매칭 (우선순위 최고)
+    # 4. 성복역 vs 수지구청역 명시적 분기 및 전체 68+ 목적지 직접 매칭
     best_place = None
-    max_match_len = 0
-    for place in PLACES_DATABASE:
-        p_name = place["name"].replace(" ", "").lower()
-        if p_name in clean_text or any(part in clean_text for part in place["name"].split() if len(part) >= 2):
-            match_score = len(place["name"])
-            if match_score > max_match_len:
-                max_match_len = match_score
-                best_place = place
+    if "성복역" in clean_text or ("성복" in clean_text and "역" in clean_text):
+        best_place = next((p for p in PLACES_DATABASE if "성복역" in p["name"]), None)
+    elif "수지구청역" in clean_text or ("수지구청" in clean_text and "역" in clean_text):
+        best_place = next((p for p in PLACES_DATABASE if "수지구청역" in p["name"]), None)
+    elif "동천역" in clean_text:
+        best_place = next((p for p in PLACES_DATABASE if "동천역" in p["name"]), None)
+    elif "상현역" in clean_text:
+        best_place = next((p for p in PLACES_DATABASE if "상현역" in p["name"]), None)
+    elif "죽전역" in clean_text:
+        best_place = next((p for p in PLACES_DATABASE if "죽전역" in p["name"]), None)
+
+    if not best_place:
+        max_match_len = 0
+        for place in PLACES_DATABASE:
+            p_name = place["name"].replace(" ", "").lower()
+            if p_name in clean_text:
+                match_score = len(place["name"])
+                if match_score > max_match_len:
+                    max_match_len = match_score
+                    best_place = place
 
     # 5. 카테고리 기반 최근접 목적지 탐색
     if not best_place:
