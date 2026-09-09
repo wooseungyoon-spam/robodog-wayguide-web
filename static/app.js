@@ -657,18 +657,18 @@ const BleController = {
      * 로보독에 UART 제어 패킷 전송 (실제 하드웨어 or 가상)
      */
     async sendPacket(command) {
-        // [만능 프로토콜 어댑터] micro:bit / 코코아팹 로보독 펌웨어 맞춤 다중 포맷 패킷 생성 (F, 1, CMD:FORWARD 등 동시 지원)
-        let packetsToSend = [`${command}\n`];
+        // [만능 프로토콜 어댑터] micro:bit / 코코아팹 로보독 펌웨어 맞춤 다중 포맷 패킷 생성 (CRLF, LF, 단일 문자 동시 지원)
+        let packetsToSend = [`${command}\r\n`, `${command}\n`];
         if (command === 'CMD:FORWARD') {
-            packetsToSend = ['F\n', '1\n', 'CMD:FORWARD\n', 'forward\n'];
+            packetsToSend = ['F\r\n', 'F\n', 'F', '1\r\n', '1\n', '1', 'CMD:FORWARD\r\n', 'forward\r\n'];
         } else if (command === 'CMD:BACKWARD') {
-            packetsToSend = ['B\n', '2\n', 'CMD:BACKWARD\n', 'backward\n'];
+            packetsToSend = ['B\r\n', 'B\n', 'B', '2\r\n', '2\n', '2', 'CMD:BACKWARD\r\n', 'backward\r\n'];
         } else if (command === 'CMD:TURN_LEFT') {
-            packetsToSend = ['L\n', '3\n', 'CMD:TURN_LEFT\n', 'left\n'];
+            packetsToSend = ['L\r\n', 'L\n', 'L', '3\r\n', '3\n', '3', 'CMD:TURN_LEFT\r\n', 'left\r\n'];
         } else if (command === 'CMD:TURN_RIGHT') {
-            packetsToSend = ['R\n', '4\n', 'CMD:TURN_RIGHT\n', 'right\n'];
+            packetsToSend = ['R\r\n', 'R\n', 'R', '4\r\n', '4\n', '4', 'CMD:TURN_RIGHT\r\n', 'right\r\n'];
         } else if (command === 'CMD:STOP') {
-            packetsToSend = ['S\n', '0\n', 'CMD:STOP\n', 'stop\n'];
+            packetsToSend = ['S\r\n', 'S\n', 'S', '0\r\n', '0\n', '0', 'CMD:STOP\r\n', 'stop\r\n'];
         }
 
         this.logTerminal(`[TX 송신] >> ${command} (${packetsToSend[0].trim()})`, 'tx');
