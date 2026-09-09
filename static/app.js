@@ -95,36 +95,24 @@ const BLE_UUIDS = {
     HM10_CHAR: '0000ffe1-0000-1000-8000-00805f9b34fb'
 };
 
-// [핵심: '알 수 없거나 지원되지 않는 기기' 잡음 비콘 100% 필터링 목록]
-// 주변의 스마트폰, 스마트TV, 워치 등 이름 없는 무선 신호를 제외하고 실제 로보독/하드웨어만 정밀 검색
-const ROBOT_DEVICE_FILTERS = [
-    { namePrefix: 'AD_' },      // 사용자 BLE 모듈 (AD_401_CST_570004_WW_379f 등)
-    { namePrefix: 'AD' },
-    { namePrefix: 'Robo' },     // RoboDog, Robot 등
-    { namePrefix: 'Dog' },      // Dog, RobotDog 등
-    { namePrefix: 'Unitree' },  // Unitree Go1, Go2, B1
-    { namePrefix: 'Go' },       // Go1, Go2
-    { namePrefix: 'ESP' },      // ESP32, ESP_SPP, ESP32_BLE
-    { namePrefix: 'HM' },       // HMSoft, HM-10, HM-19
-    { namePrefix: 'AT' },       // AT-09, AT-05
-    { namePrefix: 'JDY' },      // JDY-08, JDY-30
-    { namePrefix: 'HC' },       // HC-08, HC-02
-    { namePrefix: 'BT' },       // BT05, BT_UART
-    { namePrefix: 'BLE' },      // BLE_UART, BLE-Device
-    { namePrefix: 'UART' },
-    { namePrefix: 'CST' },      // CST 모듈
+// [순수 로보독 하드웨어 전용 100% 정밀 필터링]
+// 주의: services 필터나 AD_/BT/AT 등의 일반 접두사는 이름 없는 비콘이나 주변 에어컨(AD_401 등)을 통과시키므로
+// 철저하게 로보독/로봇 전용 이름 접두사(namePrefix)만 사용하여 잡음 기기를 100% 원천 차단합니다!
+const PURE_ROBOT_DEVICE_FILTERS = [
+    { namePrefix: 'RoboDog' },
+    { namePrefix: 'Robo' },
+    { namePrefix: 'Robot' },
+    { namePrefix: 'Dog' },
+    { namePrefix: 'Unitree' },
+    { namePrefix: 'Go1' },
+    { namePrefix: 'Go2' },
+    { namePrefix: 'ESP32' },
+    { namePrefix: 'HMSoft' },
+    { namePrefix: 'HM-10' },
     { namePrefix: 'Arduino' },
-    { namePrefix: 'BBC' },      // BBC micro:bit
-    { namePrefix: 'micro:bit' },
-    { namePrefix: 'SPIKE' },    // LEGO SPIKE
+    { namePrefix: 'SPIKE' },
     { namePrefix: 'LEGO' },
-    { namePrefix: 'Hub' },
-    { namePrefix: 'Guide' },
-    { namePrefix: 'Smart' },
-    { services: [BLE_UUIDS.NUS_SERVICE] },
-    { services: [BLE_UUIDS.HM10_SERVICE] },
-    { services: ['0000fee7-0000-1000-8000-00805f9b34fb'] },
-    { services: ['00001623-1212-efde-1623-785feabcd123'] }
+    { namePrefix: 'micro:bit' }
 ];
 
 // 어떤 로봇/BLE 모듈을 선택해도 연결 실패하지 않도록 광범위 등록하는 만능 서비스 UUID 목록
@@ -167,9 +155,24 @@ const BleController = {
         const btnDisconn = document.getElementById('btnBleDisconnect');
         const btnClearLog = document.getElementById('btnClearBleLog');
 
-        // [수정] 기본은 스마트 로보독 정밀 필터링(잡음 비콘 100% 제거), 보조는 전체 기기 검색
-        if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect(true));
-        if (btnPairAll) btnPairAll.addEventListener('click', () => this.connect(false));
+        // [수정] 순수 로보독 정밀 필터링, 기기명 직접 입력 검색, 전체 검색 지원
+        const btnCustomSearch = document.getElementById('btnBleCustomSearch');
+        const inputCustomName = document.getElementById('inputBleCustomName');
+
+        if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect('standard'));
+        if (btnCustomSearch && inputCustomName) {
+            btnCustomSearch.addEventListener('click', () => {
+                const name = inputCustomName.value.trim();
+                this.connect('custom', name);
+            });
+            inputCustomName.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const name = inputCustomName.value.trim();
+                    this.connect('custom', name);
+                }
+            });
+        }
+        if (btnPairAll) btnPairAll.addEventListener('click', () => this.connect('all'));
         if (btnPairVirt) btnPairVirt.addEventListener('click', () => this.enableMockMode());
         if (btnDisconn) btnDisconn.addEventListener('click', () => this.disconnect());
         if (btnClearLog && this.terminalEl) {
@@ -263,7 +266,7 @@ const BleController = {
     /**
      * 실제 로보독 블루투스 디바이스 검색 및 GATT 페어링 (Web Bluetooth API)
      */
-    async connect(useFilter = true) {
+    async connect(mode = 'standard', customPrefix = '') {
         if (!navigator.bluetooth) {
             alert('⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\nChrome, Edge 브라우저(또는 HTTPS 보안 환경)에서 동작합니다.\n\n즉시 시연 및 테스트가 가능하도록 [가상 시뮬레이션 모드]로 연결합니다.');
             this.logTerminal('브라우저 Web Bluetooth 미지원 -> 가상 모드 자동 진입', 'warn');
@@ -275,14 +278,21 @@ const BleController = {
             this.updateUiConnecting();
             
             let requestOptions;
-            if (useFilter) {
-                this.logTerminal('🎯 [로보독 정밀 필터링] 주변 스마트폰/TV 잡음 비콘을 제외하고 실제 로보독 및 제어기기만 검색합니다...', 'info');
+            if (mode === 'custom') {
+                const prefix = customPrefix || 'RoboDog';
+                this.logTerminal(`🔍 [기기명 정밀 검색] 기기명이 "${prefix}"(으)로 시작하는 로보독만 검색합니다...`, 'info');
                 requestOptions = {
-                    filters: ROBOT_DEVICE_FILTERS,
+                    filters: [{ namePrefix: prefix }],
+                    optionalServices: ALL_BLE_OPTIONAL_SERVICES
+                };
+            } else if (mode === 'standard') {
+                this.logTerminal('🎯 [순수 로보독 표준 검색] 주변 에어컨/TV 등 잡음 신호를 100% 차단하고 로보독 기기만 검색합니다...', 'info');
+                requestOptions = {
+                    filters: PURE_ROBOT_DEVICE_FILTERS,
                     optionalServices: ALL_BLE_OPTIONAL_SERVICES
                 };
             } else {
-                this.logTerminal('🌐 [전체 검색 모드] 주변 모든 블루투스 기기(이름 미표시 기기 포함)를 검색합니다...', 'warn');
+                this.logTerminal('🌐 [전체 검색 모드] 주변 모든 무선 신호(이름 미표시 기기 포함)를 검색합니다...', 'warn');
                 requestOptions = {
                     acceptAllDevices: true,
                     optionalServices: ALL_BLE_OPTIONAL_SERVICES

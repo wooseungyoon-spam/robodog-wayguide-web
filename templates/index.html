@@ -3243,29 +3243,38 @@
                     </div>
                 </div>
 
-                <!-- 안내 카드: 알 수 없거나 지원되지 않는 기기(잡음 신호) 방지 필터 안내 -->
+                <!-- 안내 카드: 알 수 없는 기기 및 잡음 신호 100% 차단 완료 -->
                 <div class="ble-filter-info-card" style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
                     <div style="display: flex; align-items: flex-start; gap: 10px;">
-                        <span style="font-size: 22px;">💡</span>
+                        <span style="font-size: 22px;">🛡️</span>
                         <div style="font-size: 13px; color: #E2E8F0; line-height: 1.55;">
-                            <strong style="color: #60A5FA; font-size: 14px;">스마트 로보독 정밀 필터링 적용 안내:</strong><br>
-                            주변 스마트폰/스마트TV/웨어러블 등 <strong>'알 수 없거나 지원되지 않는 기기' 잡음 비콘을 100% 자동 제외</strong>합니다.<br>
-                            실제 로보독 및 제어 하드웨어(<code>AD_401...</code>, <code>RoboDog</code>, <code>Unitree</code>, <code>ESP32</code> 등)만 검색창에 깔끔하게 표시됩니다.
+                            <strong style="color: #60A5FA; font-size: 14px;">순수 로보독 하드웨어 전용 검색 모드:</strong><br>
+                            주변 가전제품(에어컨, 스마트TV) 및 <strong>'알 수 없거나 지원되지 않는 기기' 잡음 비콘을 100% 원천 차단</strong>했습니다.<br>
+                            아래 입력창에 <strong>본인의 로보독 기기 이름</strong>을 입력하고 검색하시면 해당 기기만 1:1로 깔끔하게 검색창에 나타납니다.
                         </div>
                     </div>
                 </div>
 
-                <!-- 연결 액션 바 (정밀 검색, 전체 검색, 가상 시뮬레이션, 연결 해제) -->
-                <div class="ble-actions-bar" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 200px;" title="잡음 신호를 제외하고 실제 로보독 기기만 정밀하게 검색합니다">
-                        <span class="btn-icon">🎯</span>
-                        <span>로보독 기기 검색 (잡음 비콘 제거)</span>
+                <!-- 기기명 직접 입력 1:1 정밀 검색 바 -->
+                <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(96, 165, 250, 0.5); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 18px;">🐕</span>
+                    <input type="text" id="inputBleCustomName" placeholder="로보독 기기명 입력 (기본: RoboDog)" value="RoboDog" style="flex: 1; background: transparent; border: none; color: #F8FAFC; font-size: 14px; font-weight: 700; outline: none;">
+                    <button id="btnBleCustomSearch" class="btn-ble-action btn-pair-primary" style="padding: 7px 16px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px; margin: 0;">
+                        🔍 기기명으로 검색
                     </button>
-                    <button id="btnBlePairAll" class="btn-ble-action" style="flex: 1 1 auto; min-width: 170px; background: rgba(51, 65, 85, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); color: #F1F5F9;" title="이름이 없는 특수 모듈까지 포함하여 주변 모든 신호를 표시합니다">
+                </div>
+
+                <!-- 연결 액션 바 (표준 검색, 전체 검색, 가상 시뮬레이션, 연결 해제) -->
+                <div class="ble-actions-bar" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 190px;" title="로보독 표준 기기(RoboDog, Unitree, ESP32 등)를 자동 검색합니다">
+                        <span class="btn-icon">🎯</span>
+                        <span>로보독 표준 기기 검색</span>
+                    </button>
+                    <button id="btnBlePairAll" class="btn-ble-action" style="flex: 1 1 auto; min-width: 160px; background: rgba(51, 65, 85, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); color: #F1F5F9;" title="이름 없는 특수 모듈까지 포함하여 전체를 표시합니다">
                         <span class="btn-icon">🌐</span>
                         <span>모든 기기 전체 검색</span>
                     </button>
-                    <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" style="flex: 1 1 auto; min-width: 170px;" title="주변에 실물 로보독이 없을 때 안전하게 모든 기능을 테스트합니다">
+                    <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" style="flex: 1 1 auto; min-width: 160px;" title="주변에 실물 로보독이 없을 때 안전하게 모든 기능을 테스트합니다">
                         <span class="btn-icon">🤖</span>
                         <span>가상 로보독 시뮬레이터</span>
                     </button>
@@ -3669,7 +3678,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=31.0_ble_smart_filter_fix"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=32.0_pure_robot_name_filter"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
