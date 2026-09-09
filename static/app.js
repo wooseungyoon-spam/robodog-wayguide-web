@@ -424,7 +424,12 @@ const BleController = {
                 this.handleDisconnected();
             });
 
-            const server = await device.gatt.connect();
+            // GATT 연결 10초 타임아웃 래퍼 (무한 멈춤 방지)
+            const connectPromise = device.gatt.connect();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('응답 시간 초과 (10초). 로보독이 이미 다른 기기에 연결되어 있거나 동글 통신 모드일 수 있습니다.')), 10000)
+            );
+            const server = await Promise.race([connectPromise, timeoutPromise]);
             AppState.bleDevice = device;
             AppState.bleServer = server;
 

@@ -3258,10 +3258,10 @@
                         <span>로보독 빅아이 (JCPet) 1초 무선 연결</span>
                     </button>
 
-                    <!-- 2순위: 노트북 USB 케이블 직접 연결 버튼 -->
-                    <button id="btnPairUsbSerial" class="btn-ble-action" onclick="BleController.connectUsbSerial()" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFF; font-weight: 900; font-size: 15px; padding: 12px 20px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" title="노트북에 USB 케이블로 직접 꽂아둔 로보독을 Web Serial COM 포트로 연결합니다">
+                    <!-- 2순위: 노트북 USB 케이블 또는 2.4G 무선 동글 연결 버튼 -->
+                    <button id="btnPairUsbSerial" class="btn-ble-action" onclick="BleController.connectUsbSerial()" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFF; font-weight: 900; font-size: 15px; padding: 12px 20px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" title="노트북에 꽂힌 2.4G 무선 동글 또는 USB 케이블을 Web Serial COM 포트로 1초 만에 연결합니다">
                         <span style="font-size: 20px;">🔌</span>
-                        <span>노트북 USB 케이블 직접 연결 (유선 COM 포트 직결)</span>
+                        <span>노트북 2.4G 무선 동글 또는 USB 케이블 연결 (COM 포트)</span>
                     </button>
 
                     <!-- 3순위: 무선 블루투스 기기명 검색 바 -->
@@ -3692,7 +3692,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=36.0_gatt_status"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=37.0_timeout_and_dongle"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
