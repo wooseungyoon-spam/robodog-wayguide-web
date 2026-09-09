@@ -309,11 +309,11 @@ const BleController = {
             AppState.isUsbConnected = true;
             AppState.isMockBle = false;
 
-            const devName = 'RoboDog-USB (노트북 유선 직결)';
-            this.updateUiState(true, devName, devName);
-            this.logTerminal(`🎉 [성공] 노트북 USB 케이블 직결 성공! (${devName}, 115200 bps)`, 'tx');
-            logEvent('[ROBODOG]', `🎉 노트북 USB 직접 연결 성공! (${devName})`, 'success');
-            VoiceEngine.speak('로보독과 노트북 USB 케이블로 직접 연결되었습니다.');
+            const devName = 'RoboDog 2.4G 동글 (nRF52)';
+            this.updateUiState(true, '동글 무선 연결 성공 (ON)', devName);
+            this.logTerminal(`🎉 [성공] 2.4G 무선 동글 연결 성공! (${devName}, 115200 bps)`, 'tx');
+            logEvent('[ROBODOG]', `🎉 2.4G 무선 동글 연결 성공! (${devName})`, 'success');
+            VoiceEngine.speak('로보독과 무선 동글로 연결되었습니다.');
 
             // 시리얼 수신 루프 가동
             this.startSerialReadLoop(port);
