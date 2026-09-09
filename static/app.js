@@ -637,9 +637,14 @@ const BleController = {
         if (btnPairVirt) btnPairVirt.style.display = connected ? 'none' : 'inline-flex';
         if (btnDisconn) btnDisconn.style.display = connected ? 'inline-flex' : 'none';
 
-        // 5. 튜닝 탭 버튼
+        // 5. 튜닝 탭 버튼 & 하단 텔레메트리 바
         const btnOld = document.getElementById('btnBleToggle');
         if (btnOld) btnOld.textContent = connected ? (AppState.isMockBle ? '실제 BLE 검색' : '연결 해제') : '🔗 실제 BLE 연결';
+
+        const barDot = document.getElementById('barBleStatusDot');
+        const barText = document.getElementById('barBleStatusText');
+        if (barDot) barDot.className = `status-dot ${connected ? 'dot-connected' : 'disconnected'}`;
+        if (barText) barText.textContent = connected ? deviceName : '미연결';
     },
 
     /**

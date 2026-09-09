@@ -2572,8 +2572,8 @@
             <div class="telem-item">
                 <span class="telem-label">BLE 무선 연결</span>
                 <div class="telem-value-group">
-                    <span id="bleStatusDot" class="status-dot disconnected"></span>
-                    <span id="bleStatusText" class="telem-val">가상 시뮬레이션</span>
+                    <span id="barBleStatusDot" class="status-dot disconnected"></span>
+                    <span id="barBleStatusText" class="telem-val">가상 시뮬레이션</span>
                     <button id="btnBleToggle" class="btn-tiny" title="클릭하여 실제 로보독 블루투스 검색 및 페어링">🔗 실제 BLE 연결</button>
                 </div>
             </div>
@@ -3692,7 +3692,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=37.0_timeout_and_dongle"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=38.0_duplicate_id_fix"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
