@@ -293,14 +293,20 @@ const BleController = {
             // 노트북에 꽂힌 USB 시리얼 포트(COM3, COM4, CH340, CP2102 등) 선택 팝업
             const port = await navigator.serial.requestPort();
             
-            // 로보독/ESP32/아두이노 표준 115200 bps 우선 연결 (실패 시 9600)
+            // 로보독/동글 표준 115200 bps 우선 연결 (이미 열려있으면 에러 없이 재사용)
             try {
                 await port.open({ baudRate: 115200 });
             } catch (openErr) {
-                try {
-                    await port.open({ baudRate: 9600 });
-                } catch (e) {
-                    throw openErr;
+                if (openErr.message && (openErr.message.includes('already open') || openErr.name === 'InvalidStateError')) {
+                    // 이미 열려 있으므로 정상 진행
+                } else {
+                    try {
+                        await port.open({ baudRate: 9600 });
+                    } catch (e) {
+                        if (!e.message || (!e.message.includes('already open') && e.name !== 'InvalidStateError')) {
+                            throw openErr;
+                        }
+                    }
                 }
             }
 
