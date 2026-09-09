@@ -367,12 +367,15 @@ const BleController = {
             
             let requestOptions;
             if (mode === 'microbit') {
-                this.logTerminal('👾 [마이크로비트 무선 검색] BBC micro:bit BLE UART 기기를 검색합니다...', 'info');
+                this.logTerminal('👾 [마이크로비트 무선 검색] BBC micro:bit BLE 기기(이름 및 UART 서비스)를 검색합니다...', 'info');
                 requestOptions = {
                     filters: [
                         { namePrefix: 'BBC micro:bit' },
                         { namePrefix: 'BBC' },
-                        { namePrefix: 'micro:bit' }
+                        { namePrefix: 'micro:bit' },
+                        { namePrefix: 'micro' },
+                        { services: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2'] },
+                        { services: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] }
                     ],
                     optionalServices: ALL_BLE_OPTIONAL_SERVICES
                 };
