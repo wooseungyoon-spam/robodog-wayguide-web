@@ -416,6 +416,7 @@ const BleController = {
             const device = await navigator.bluetooth.requestDevice(requestOptions);
             const devName = device.name || 'RoboDog-HW';
 
+            this.updateUiState(false, '무선 GATT 연결 시도 중...', devName);
             this.logTerminal(`기기 선택됨: [${devName}] - GATT 서버 연결 시도 중...`, 'info');
 
             device.addEventListener('gattserverdisconnected', () => {
