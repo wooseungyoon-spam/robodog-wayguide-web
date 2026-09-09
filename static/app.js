@@ -99,6 +99,8 @@ const BLE_UUIDS = {
 // 주의: services 필터나 AD_/BT/AT 등의 일반 접두사는 이름 없는 비콘이나 주변 에어컨(AD_401 등)을 통과시키므로
 // 철저하게 로보독/로봇 전용 이름 접두사(namePrefix)만 사용하여 잡음 기기를 100% 원천 차단합니다!
 const PURE_ROBOT_DEVICE_FILTERS = [
+    { namePrefix: 'JCPet' },         // 코코아팹 로보독 빅아이 실제 BLE 기기명 (JCPet)
+    { namePrefix: 'JC' },
     { namePrefix: 'RoboDog' },
     { namePrefix: 'Robo' },
     { namePrefix: 'Robot' },
@@ -157,12 +159,14 @@ const BleController = {
         const btnDisconn = document.getElementById('btnBleDisconnect');
         const btnClearLog = document.getElementById('btnClearBleLog');
 
-        // [신규: 노트북 USB 유선 케이블 직결 + 무선 블루투스 통합 연동]
+        // [신규: 로보독 빅아이(JCPet) 1초 직결 + 노트북 USB 유선 + 마이크로비트]
+        const btnPairJcPet = document.getElementById('btnBlePairJcPet');
         const btnPairUsb = document.getElementById('btnPairUsbSerial');
         const btnPairMicrobit = document.getElementById('btnBlePairMicrobit');
         const btnCustomSearch = document.getElementById('btnBleCustomSearch');
         const inputCustomName = document.getElementById('inputBleCustomName');
 
+        if (btnPairJcPet) btnPairJcPet.addEventListener('click', () => this.connect('jcpet'));
         if (btnPairUsb) btnPairUsb.addEventListener('click', () => this.connectUsbSerial());
         if (btnPairMicrobit) btnPairMicrobit.addEventListener('click', () => this.connect('microbit'));
         if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect('standard'));
@@ -366,7 +370,16 @@ const BleController = {
             this.updateUiConnecting();
             
             let requestOptions;
-            if (mode === 'microbit') {
+            if (mode === 'jcpet') {
+                this.logTerminal('🐕 [로보독 빅아이 전용 검색] JCPet(20045178) 블루투스 기기를 1:1로 검색합니다...', 'info');
+                requestOptions = {
+                    filters: [
+                        { namePrefix: 'JCPet' },
+                        { namePrefix: 'JC' }
+                    ],
+                    optionalServices: ALL_BLE_OPTIONAL_SERVICES
+                };
+            } else if (mode === 'microbit') {
                 this.logTerminal('👾 [마이크로비트 무선 검색] BBC micro:bit BLE 기기(이름 및 UART 서비스)를 검색합니다...', 'info');
                 requestOptions = {
                     filters: [

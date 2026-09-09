@@ -3252,16 +3252,22 @@
 
                 <!-- 연결 액션 바 (USB 직결, 블루투스 무선 검색, 가상 시뮬레이션, 연결 해제) -->
                 <div class="ble-actions-bar" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- 1순위: 노트북 USB 케이블 직접 연결 버튼 -->
+                    <!-- 1순위: 로보독 빅아이 (JCPet) 전용 1-Click 무선 연결 버튼 -->
+                    <button id="btnBlePairJcPet" class="btn-ble-action" style="background: linear-gradient(135deg, #EC4899 0%, #BE185D 100%); color: #FFF; font-weight: 900; font-size: 15px; padding: 13px 20px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" title="로보독 빅아이(JCPet) 블루투스를 1-Click으로 즉시 연결합니다">
+                        <span style="font-size: 20px;">🐕</span>
+                        <span>로보독 빅아이 (JCPet) 1초 무선 연결</span>
+                    </button>
+
+                    <!-- 2순위: 노트북 USB 케이블 직접 연결 버튼 -->
                     <button id="btnPairUsbSerial" class="btn-ble-action" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFF; font-weight: 900; font-size: 15px; padding: 12px 20px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" title="노트북에 USB 케이블로 직접 꽂아둔 로보독을 Web Serial COM 포트로 연결합니다">
                         <span style="font-size: 20px;">🔌</span>
                         <span>노트북 USB 케이블 직접 연결 (유선 COM 포트 직결)</span>
                     </button>
 
-                    <!-- 2순위: 무선 블루투스 기기명 검색 바 -->
+                    <!-- 3순위: 무선 블루투스 기기명 검색 바 -->
                     <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 12px; padding: 8px 12px; display: flex; gap: 10px; align-items: center;">
                         <span style="font-size: 18px;">📡</span>
-                        <input type="text" id="inputBleCustomName" placeholder="무선 블루투스 기기명 (예: RoboDog, Unitree 등)" value="RoboDog" style="flex: 1; background: transparent; border: none; color: #F8FAFC; font-size: 13.5px; font-weight: 700; outline: none;">
+                        <input type="text" id="inputBleCustomName" placeholder="무선 블루투스 기기명 (예: JCPet, RoboDog 등)" value="JCPet" style="flex: 1; background: transparent; border: none; color: #F8FAFC; font-size: 13.5px; font-weight: 700; outline: none;">
                         <button id="btnBleCustomSearch" class="btn-ble-action btn-pair-primary" style="padding: 7px 14px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px; margin: 0;">
                             무선 기기명 검색
                         </button>
