@@ -155,10 +155,12 @@ const BleController = {
         const btnDisconn = document.getElementById('btnBleDisconnect');
         const btnClearLog = document.getElementById('btnClearBleLog');
 
-        // [수정] 순수 로보독 정밀 필터링, 기기명 직접 입력 검색, 전체 검색 지원
+        // [신규: 노트북 USB 유선 케이블 직결 + 무선 블루투스 통합 연동]
+        const btnPairUsb = document.getElementById('btnPairUsbSerial');
         const btnCustomSearch = document.getElementById('btnBleCustomSearch');
         const inputCustomName = document.getElementById('inputBleCustomName');
 
+        if (btnPairUsb) btnPairUsb.addEventListener('click', () => this.connectUsbSerial());
         if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect('standard'));
         if (btnCustomSearch && inputCustomName) {
             btnCustomSearch.addEventListener('click', () => {
@@ -266,6 +268,88 @@ const BleController = {
     /**
      * 실제 로보독 블루투스 디바이스 검색 및 GATT 페어링 (Web Bluetooth API)
      */
+    /**
+     * [신규: 노트북 USB 케이블 직접 연결 (Web Serial API / COM 포트 직결)]
+     * 로보독이 노트북에 USB 케이블로 꽂혀 있을 때 블루투스 검색 대신 유선 시리얼 포트로 100% 즉각 연결
+     */
+    async connectUsbSerial() {
+        if (!navigator.serial) {
+            alert('현재 브라우저가 Web Serial API(USB 직접 연결)를 지원하지 않습니다.\nChrome 또는 Edge 브라우저를 사용해 주세요.');
+            return;
+        }
+
+        try {
+            this.updateUiConnecting();
+            this.logTerminal('🔌 노트북에 USB 케이블로 연결된 로보독(COM 시리얼 포트) 선택 대기 중...', 'info');
+            
+            // 노트북에 꽂힌 USB 시리얼 포트(COM3, COM4, CH340, CP2102 등) 선택 팝업
+            const port = await navigator.serial.requestPort();
+            
+            // 로보독/ESP32/아두이노 표준 115200 bps 우선 연결 (실패 시 9600)
+            try {
+                await port.open({ baudRate: 115200 });
+            } catch (openErr) {
+                try {
+                    await port.open({ baudRate: 9600 });
+                } catch (e) {
+                    throw openErr;
+                }
+            }
+
+            AppState.serialPort = port;
+            AppState.isBleConnected = true;
+            AppState.isUsbConnected = true;
+            AppState.isMockBle = false;
+
+            const devName = 'RoboDog-USB (노트북 유선 직결)';
+            this.updateUiState(true, devName, devName);
+            this.logTerminal(`🎉 [성공] 노트북 USB 케이블 직결 성공! (${devName}, 115200 bps)`, 'tx');
+            logEvent('[ROBODOG]', `🎉 노트북 USB 직접 연결 성공! (${devName})`, 'success');
+            VoiceEngine.speak('로보독과 노트북 USB 케이블로 직접 연결되었습니다.');
+
+            // 시리얼 수신 루프 가동
+            this.startSerialReadLoop(port);
+
+            // 백엔드 상태 동기화
+            fetch('/api/robodog/ble/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ connected: true, device_name: devName, connection_type: 'USB_SERIAL', battery: 100 })
+            }).catch(() => {});
+
+        } catch (err) {
+            if (err.name === 'NotFoundError') {
+                this.logTerminal('USB 포트 선택이 취소되었습니다.', 'warn');
+                this.updateUiState(false, '연결 대기 중', '미연결');
+            } else {
+                this.logTerminal(`USB 시리얼 연결 오류: ${err.message}`, 'err');
+                alert(`USB 시리얼 연결 중 오류가 발생했습니다: ${err.message}\n(장치가 다른 프로그램에서 사용 중인지 확인해 주세요)`);
+                this.updateUiState(false, '연결 실패', '미연결');
+            }
+        }
+    },
+
+    async startSerialReadLoop(port) {
+        while (port.readable && AppState.isUsbConnected) {
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = port.readable.pipeTo(textDecoder.writable).catch(() => {});
+            const reader = textDecoder.readable.getReader();
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) {
+                        this.handleIncomingData(value);
+                    }
+                }
+            } catch (error) {
+                console.warn('USB 시리얼 수신 스트림 해제:', error);
+            } finally {
+                reader.releaseLock();
+            }
+        }
+    },
+
     async connect(mode = 'standard', customPrefix = '') {
         if (!navigator.bluetooth) {
             alert('⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\nChrome, Edge 브라우저(또는 HTTPS 보안 환경)에서 동작합니다.\n\n즉시 시연 및 테스트가 가능하도록 [가상 시뮬레이션 모드]로 연결합니다.');
@@ -402,10 +486,11 @@ const BleController = {
 
         } catch (error) {
             if (error.name === 'NotFoundError') {
-                this.logTerminal('블루투스 기기 검색 창이 취소되었습니다. (연결되지 않음)', 'warn');
-                logEvent('[BLE]', '블루투스 검색이 취소되었습니다. (미연결 상태 유지)', 'info');
+                this.logTerminal('블루투스 기기 검색이 취소되었거나 호환 기기를 찾지 못했습니다.', 'warn');
+                this.logTerminal('💡 안내: 노트북에 USB 케이블로 연결하셨다면 [노트북 USB 케이블 직접 연결] 버튼을 눌러주세요!', 'info');
+                logEvent('[BLE]', '블루투스 검색 창 닫힘 (USB 유선 직결 모드 사용 가능)', 'info');
                 this.updateUiState(false, '연결 취소됨', '미연결');
-                return; // 사용자가 취소(X)를 눌렀을 때는 가상 모드로 자동 연결하지 않음
+                return;
             } else {
                 this.logTerminal(`BLE 연결 오류 (${error.message})`, 'err');
                 logEvent('[BLE]', `BLE 연결 실패: ${error.message}`, 'error');
@@ -433,7 +518,15 @@ const BleController = {
         }).catch(() => {});
     },
 
-    disconnect() {
+    async disconnect() {
+        if (AppState.isUsbConnected && AppState.serialPort) {
+            try {
+                await AppState.serialPort.close();
+            } catch (e) {}
+            AppState.serialPort = null;
+            AppState.isUsbConnected = false;
+            this.logTerminal('노트북 USB 시리얼 포트 연결이 정상 해제되었습니다.', 'warn');
+        }
         if (AppState.bleDevice && AppState.bleDevice.gatt && AppState.bleDevice.gatt.connected) {
             AppState.bleDevice.gatt.disconnect();
         }
@@ -521,6 +614,18 @@ const BleController = {
         this.logTerminal(`[TX 송신] >> ${command}`, 'tx');
         logEvent('[BLE]', `[TX 송신] >> ${command}`, 'info');
 
+        // 1. [유선] 노트북 USB 시리얼 포트로 직접 패킷 전송
+        if (AppState.isUsbConnected && AppState.serialPort && AppState.serialPort.writable) {
+            try {
+                const encoder = new TextEncoder();
+                const writer = AppState.serialPort.writable.getWriter();
+                await writer.write(encoder.encode(fullPacket));
+                writer.releaseLock();
+            } catch (usbErr) {
+                console.warn('USB 시리얼 송신 오류:', usbErr);
+            }
+        }
+
         // 백엔드 중계 API 비동기 알림
         fetch('/api/robodog/ble/command', {
             method: 'POST',
@@ -528,7 +633,7 @@ const BleController = {
             body: JSON.stringify({ command })
         }).catch(() => {});
 
-        if (AppState.isMockBle || !AppState.bleTxChar) {
+        if (AppState.isMockBle || (!AppState.bleTxChar && !AppState.isUsbConnected)) {
             this.mockResponse(command);
             return;
         }

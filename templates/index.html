@@ -2194,12 +2194,7 @@
                 <span id="bleHeaderBadge" class="ble-badge badge-off">연결안됨</span>
             </button>
 
-            <!-- [신규] 스마트 햅틱 리드줄 (레고 스파이크 BLE) 연동 버튼 -->
-            <button id="btnHeaderLeash" class="btn-leash-header" title="스마트 햅틱 리드줄 (레고 스파이크 BLE) 연동 및 5x5 매트릭스 관제">
-                <span class="leash-icon">🦮</span>
-                <span id="leashHeaderText" class="leash-text">리드줄</span>
-                <span id="leashHeaderBadge" class="leash-badge badge-off">연결안됨</span>
-            </button>
+
 
             <!-- [신규] AI 얼굴인식 (Face ID) 카메라 버튼 -->
             <button id="btnHeaderFaceId" class="btn-faceid-header" title="AI 얼굴인식 (Face ID) 카메라 열기">
@@ -3243,45 +3238,53 @@
                     </div>
                 </div>
 
-                <!-- 안내 카드: 알 수 없는 기기 및 잡음 신호 100% 차단 완료 -->
-                <div class="ble-filter-info-card" style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
-                    <div style="display: flex; align-items: flex-start; gap: 10px;">
-                        <span style="font-size: 22px;">🛡️</span>
-                        <div style="font-size: 13px; color: #E2E8F0; line-height: 1.55;">
-                            <strong style="color: #60A5FA; font-size: 14px;">순수 로보독 하드웨어 전용 검색 모드:</strong><br>
-                            주변 가전제품(에어컨, 스마트TV) 및 <strong>'알 수 없거나 지원되지 않는 기기' 잡음 비콘을 100% 원천 차단</strong>했습니다.<br>
-                            아래 입력창에 <strong>본인의 로보독 기기 이름</strong>을 입력하고 검색하시면 해당 기기만 1:1로 깔끔하게 검색창에 나타납니다.
+                <!-- 안내 카드: USB 유선 직접 연결 vs 무선 블루투스 가이드 -->
+                <div class="ble-filter-info-card" style="background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <span style="font-size: 26px;">🔌</span>
+                        <div style="font-size: 13.5px; color: #E2E8F0; line-height: 1.6;">
+                            <strong style="color: #34D399; font-size: 15px;">노트북에 USB 케이블로 꽂아두셨나요?</strong><br>
+                            노트북에 USB 케이블로 직접 연결한 상태에서는 무선 블루투스가 아니라 <strong>'USB 시리얼(COM 포트)'</strong>로 인식됩니다.<br>
+                            아래의 <strong style="color: #6EE7B7;">[🔌 노트북 USB 케이블 직접 연결]</strong> 버튼을 누르시면 연결된 포트를 선택하여 즉시 제어할 수 있습니다!
                         </div>
                     </div>
                 </div>
 
-                <!-- 기기명 직접 입력 1:1 정밀 검색 바 -->
-                <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(96, 165, 250, 0.5); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center;">
-                    <span style="font-size: 18px;">🐕</span>
-                    <input type="text" id="inputBleCustomName" placeholder="로보독 기기명 입력 (기본: RoboDog)" value="RoboDog" style="flex: 1; background: transparent; border: none; color: #F8FAFC; font-size: 14px; font-weight: 700; outline: none;">
-                    <button id="btnBleCustomSearch" class="btn-ble-action btn-pair-primary" style="padding: 7px 16px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px; margin: 0;">
-                        🔍 기기명으로 검색
+                <!-- 연결 액션 바 (USB 직결, 블루투스 무선 검색, 가상 시뮬레이션, 연결 해제) -->
+                <div class="ble-actions-bar" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- 1순위: 노트북 USB 케이블 직접 연결 버튼 -->
+                    <button id="btnPairUsbSerial" class="btn-ble-action" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFF; font-weight: 900; font-size: 15px; padding: 12px 20px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" title="노트북에 USB 케이블로 직접 꽂아둔 로보독을 Web Serial COM 포트로 연결합니다">
+                        <span style="font-size: 20px;">🔌</span>
+                        <span>노트북 USB 케이블 직접 연결 (유선 COM 포트 직결)</span>
                     </button>
-                </div>
 
-                <!-- 연결 액션 바 (표준 검색, 전체 검색, 가상 시뮬레이션, 연결 해제) -->
-                <div class="ble-actions-bar" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 190px;" title="로보독 표준 기기(RoboDog, Unitree, ESP32 등)를 자동 검색합니다">
-                        <span class="btn-icon">🎯</span>
-                        <span>로보독 표준 기기 검색</span>
-                    </button>
-                    <button id="btnBlePairAll" class="btn-ble-action" style="flex: 1 1 auto; min-width: 160px; background: rgba(51, 65, 85, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); color: #F1F5F9;" title="이름 없는 특수 모듈까지 포함하여 전체를 표시합니다">
-                        <span class="btn-icon">🌐</span>
-                        <span>모든 기기 전체 검색</span>
-                    </button>
-                    <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" style="flex: 1 1 auto; min-width: 160px;" title="주변에 실물 로보독이 없을 때 안전하게 모든 기능을 테스트합니다">
-                        <span class="btn-icon">🤖</span>
-                        <span>가상 로보독 시뮬레이터</span>
-                    </button>
-                    <button id="btnBleDisconnect" class="btn-ble-action btn-disconnect" style="display: none; flex: 1 1 auto; min-width: 120px;">
-                        <span class="btn-icon">🔌</span>
-                        <span>연결 해제</span>
-                    </button>
+                    <!-- 2순위: 무선 블루투스 기기명 검색 바 -->
+                    <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 12px; padding: 8px 12px; display: flex; gap: 10px; align-items: center;">
+                        <span style="font-size: 18px;">📡</span>
+                        <input type="text" id="inputBleCustomName" placeholder="무선 블루투스 기기명 (예: RoboDog, Unitree 등)" value="RoboDog" style="flex: 1; background: transparent; border: none; color: #F8FAFC; font-size: 13.5px; font-weight: 700; outline: none;">
+                        <button id="btnBleCustomSearch" class="btn-ble-action btn-pair-primary" style="padding: 7px 14px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px; margin: 0;">
+                            무선 기기명 검색
+                        </button>
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 170px;" title="로보독 표준 기기(RoboDog, Unitree 등)를 무선 검색합니다">
+                            <span class="btn-icon">🎯</span>
+                            <span>무선 표준 기기 검색</span>
+                        </button>
+                        <button id="btnBlePairAll" class="btn-ble-action" style="flex: 1 1 auto; min-width: 140px; background: rgba(51, 65, 85, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); color: #F1F5F9;" title="이름 없는 특수 모듈까지 포함하여 전체를 표시합니다">
+                            <span class="btn-icon">🌐</span>
+                            <span>모든 기기 전체 검색</span>
+                        </button>
+                        <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" style="flex: 1 1 auto; min-width: 150px;" title="하드웨어가 없을 때 안전하게 모든 기능을 테스트합니다">
+                            <span class="btn-icon">🤖</span>
+                            <span>가상 시뮬레이터</span>
+                        </button>
+                        <button id="btnBleDisconnect" class="btn-ble-action btn-disconnect" style="display: none; flex: 1 1 auto; min-width: 120px;">
+                            <span class="btn-icon">🛑</span>
+                            <span>연결 해제</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- 자율 보행 내비게이션 추종 모드 스위치 -->
@@ -3678,7 +3681,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=32.0_pure_robot_name_filter"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=33.0_usb_serial_direct_connect"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
