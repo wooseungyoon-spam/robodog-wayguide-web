@@ -103,6 +103,9 @@ const PURE_ROBOT_DEVICE_FILTERS = [
     { namePrefix: 'Robo' },
     { namePrefix: 'Robot' },
     { namePrefix: 'Dog' },
+    { namePrefix: 'BBC micro:bit' }, // 마이크로비트 실제 브로드캐스트 기본 이름
+    { namePrefix: 'BBC' },
+    { namePrefix: 'micro:bit' },
     { namePrefix: 'Unitree' },
     { namePrefix: 'Go1' },
     { namePrefix: 'Go2' },
@@ -111,8 +114,7 @@ const PURE_ROBOT_DEVICE_FILTERS = [
     { namePrefix: 'HM-10' },
     { namePrefix: 'Arduino' },
     { namePrefix: 'SPIKE' },
-    { namePrefix: 'LEGO' },
-    { namePrefix: 'micro:bit' }
+    { namePrefix: 'LEGO' }
 ];
 
 // 어떤 로봇/BLE 모듈을 선택해도 연결 실패하지 않도록 광범위 등록하는 만능 서비스 UUID 목록
@@ -157,10 +159,12 @@ const BleController = {
 
         // [신규: 노트북 USB 유선 케이블 직결 + 무선 블루투스 통합 연동]
         const btnPairUsb = document.getElementById('btnPairUsbSerial');
+        const btnPairMicrobit = document.getElementById('btnBlePairMicrobit');
         const btnCustomSearch = document.getElementById('btnBleCustomSearch');
         const inputCustomName = document.getElementById('inputBleCustomName');
 
         if (btnPairUsb) btnPairUsb.addEventListener('click', () => this.connectUsbSerial());
+        if (btnPairMicrobit) btnPairMicrobit.addEventListener('click', () => this.connect('microbit'));
         if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect('standard'));
         if (btnCustomSearch && inputCustomName) {
             btnCustomSearch.addEventListener('click', () => {
@@ -362,7 +366,17 @@ const BleController = {
             this.updateUiConnecting();
             
             let requestOptions;
-            if (mode === 'custom') {
+            if (mode === 'microbit') {
+                this.logTerminal('👾 [마이크로비트 무선 검색] BBC micro:bit BLE UART 기기를 검색합니다...', 'info');
+                requestOptions = {
+                    filters: [
+                        { namePrefix: 'BBC micro:bit' },
+                        { namePrefix: 'BBC' },
+                        { namePrefix: 'micro:bit' }
+                    ],
+                    optionalServices: ALL_BLE_OPTIONAL_SERVICES
+                };
+            } else if (mode === 'custom') {
                 const prefix = customPrefix || 'RoboDog';
                 this.logTerminal(`🔍 [기기명 정밀 검색] 기기명이 "${prefix}"(으)로 시작하는 로보독만 검색합니다...`, 'info');
                 requestOptions = {

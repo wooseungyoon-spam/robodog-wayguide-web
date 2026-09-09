@@ -3268,9 +3268,14 @@
                     </div>
 
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                        <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 170px;" title="로보독 표준 기기(RoboDog, Unitree 등)를 무선 검색합니다">
+                        <!-- 마이크로비트 전용 1-Click 무선 연결 버튼 -->
+                        <button id="btnBlePairMicrobit" class="btn-ble-action" style="flex: 1 1 auto; min-width: 175px; background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); color: #FFF; font-weight: 800; border: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35); cursor: pointer;" title="로보독에 탑재된 마이크로비트(BBC micro:bit) 블루투스를 1:1로 검색합니다">
+                            <span style="font-size: 16px;">👾</span>
+                            <span>마이크로비트(micro:bit) 무선 검색</span>
+                        </button>
+                        <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 160px;" title="로보독 표준 기기(RoboDog, Unitree 등)를 무선 검색합니다">
                             <span class="btn-icon">🎯</span>
-                            <span>무선 표준 기기 검색</span>
+                            <span>기타 무선 기기 검색</span>
                         </button>
                         <button id="btnBlePairAll" class="btn-ble-action" style="flex: 1 1 auto; min-width: 140px; background: rgba(51, 65, 85, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); color: #F1F5F9;" title="이름 없는 특수 모듈까지 포함하여 전체를 표시합니다">
                             <span class="btn-icon">🌐</span>
@@ -3681,7 +3686,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=33.0_usb_serial_direct_connect"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=34.0_microbit_ble_integration"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
