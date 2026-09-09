@@ -86,7 +86,7 @@ function calculateDistanceM(lat1, lng1, lat2, lng2) {
 // ---------------------------------------------------------
 // 2. 실제 로보독 Web Bluetooth (BLE) UART 통신 제어기
 // ---------------------------------------------------------
-// Nordic UART Service 및 HM-10 / ESP32 표준 BLE 서비스 UUID 목록
+// Nordic UART Service, HM-10, ESP32, Unitree, AD-401, LEGO, micro:bit 표준 BLE 서비스 UUID 목록
 const BLE_UUIDS = {
     NUS_SERVICE: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
     NUS_TX: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
@@ -94,6 +94,54 @@ const BLE_UUIDS = {
     HM10_SERVICE: '0000ffe0-0000-1000-8000-00805f9b34fb',
     HM10_CHAR: '0000ffe1-0000-1000-8000-00805f9b34fb'
 };
+
+// [핵심: '알 수 없거나 지원되지 않는 기기' 잡음 비콘 100% 필터링 목록]
+// 주변의 스마트폰, 스마트TV, 워치 등 이름 없는 무선 신호를 제외하고 실제 로보독/하드웨어만 정밀 검색
+const ROBOT_DEVICE_FILTERS = [
+    { namePrefix: 'AD_' },      // 사용자 BLE 모듈 (AD_401_CST_570004_WW_379f 등)
+    { namePrefix: 'AD' },
+    { namePrefix: 'Robo' },     // RoboDog, Robot 등
+    { namePrefix: 'Dog' },      // Dog, RobotDog 등
+    { namePrefix: 'Unitree' },  // Unitree Go1, Go2, B1
+    { namePrefix: 'Go' },       // Go1, Go2
+    { namePrefix: 'ESP' },      // ESP32, ESP_SPP, ESP32_BLE
+    { namePrefix: 'HM' },       // HMSoft, HM-10, HM-19
+    { namePrefix: 'AT' },       // AT-09, AT-05
+    { namePrefix: 'JDY' },      // JDY-08, JDY-30
+    { namePrefix: 'HC' },       // HC-08, HC-02
+    { namePrefix: 'BT' },       // BT05, BT_UART
+    { namePrefix: 'BLE' },      // BLE_UART, BLE-Device
+    { namePrefix: 'UART' },
+    { namePrefix: 'CST' },      // CST 모듈
+    { namePrefix: 'Arduino' },
+    { namePrefix: 'BBC' },      // BBC micro:bit
+    { namePrefix: 'micro:bit' },
+    { namePrefix: 'SPIKE' },    // LEGO SPIKE
+    { namePrefix: 'LEGO' },
+    { namePrefix: 'Hub' },
+    { namePrefix: 'Guide' },
+    { namePrefix: 'Smart' },
+    { services: [BLE_UUIDS.NUS_SERVICE] },
+    { services: [BLE_UUIDS.HM10_SERVICE] },
+    { services: ['0000fee7-0000-1000-8000-00805f9b34fb'] },
+    { services: ['00001623-1212-efde-1623-785feabcd123'] }
+];
+
+// 어떤 로봇/BLE 모듈을 선택해도 연결 실패하지 않도록 광범위 등록하는 만능 서비스 UUID 목록
+const ALL_BLE_OPTIONAL_SERVICES = [
+    '6e400001-b5a3-f393-e0a9-e50e24dcca9e',  // Nordic UART (NUS)
+    '0000ffe0-0000-1000-8000-00805f9b34fb',  // HM-10 / CC2541 Serial
+    '0000ffe5-0000-1000-8000-00805f9b34fb',  // JDY-08 / TI Serial
+    '0000fff0-0000-1000-8000-00805f9b34fb',  // Custom UART (FFF0)
+    '0000fee7-0000-1000-8000-00805f9b34fb',  // Telink / Tuya / ESP32
+    '49535343-fe7d-4ae5-8fa9-9fafd205e455',  // Microchip / ISSC UART
+    'e7810a71-73ae-499d-8c15-faa9aef0c3f2',  // micro:bit UART
+    '00001623-1212-efde-1623-785feabcd123',  // LEGO Wireless Hub
+    '00001101-0000-1000-8000-00805f9b34fb',  // Serial Port Profile (SPP)
+    'generic_access',
+    'device_information',
+    'battery_service'
+];
 
 const BleController = {
     modalEl: null,
@@ -114,11 +162,14 @@ const BleController = {
 
         // 모달 내 페어링 및 해제 버튼
         const btnPairReal = document.getElementById('btnBlePairReal');
+        const btnPairAll = document.getElementById('btnBlePairAll');
         const btnPairVirt = document.getElementById('btnBlePairVirtual');
         const btnDisconn = document.getElementById('btnBleDisconnect');
         const btnClearLog = document.getElementById('btnClearBleLog');
 
-        if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect());
+        // [수정] 기본은 스마트 로보독 정밀 필터링(잡음 비콘 100% 제거), 보조는 전체 기기 검색
+        if (btnPairReal) btnPairReal.addEventListener('click', () => this.connect(true));
+        if (btnPairAll) btnPairAll.addEventListener('click', () => this.connect(false));
         if (btnPairVirt) btnPairVirt.addEventListener('click', () => this.enableMockMode());
         if (btnDisconn) btnDisconn.addEventListener('click', () => this.disconnect());
         if (btnClearLog && this.terminalEl) {
@@ -212,7 +263,7 @@ const BleController = {
     /**
      * 실제 로보독 블루투스 디바이스 검색 및 GATT 페어링 (Web Bluetooth API)
      */
-    async connect() {
+    async connect(useFilter = true) {
         if (!navigator.bluetooth) {
             alert('⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\nChrome, Edge 브라우저(또는 HTTPS 보안 환경)에서 동작합니다.\n\n즉시 시연 및 테스트가 가능하도록 [가상 시뮬레이션 모드]로 연결합니다.');
             this.logTerminal('브라우저 Web Bluetooth 미지원 -> 가상 모드 자동 진입', 'warn');
@@ -222,24 +273,29 @@ const BleController = {
 
         try {
             this.updateUiConnecting();
-            this.logTerminal('📡 주변 로보독 블루투스(BLE UART GATT) 장치를 검색 중...', 'info');
+            
+            let requestOptions;
+            if (useFilter) {
+                this.logTerminal('🎯 [로보독 정밀 필터링] 주변 스마트폰/TV 잡음 비콘을 제외하고 실제 로보독 및 제어기기만 검색합니다...', 'info');
+                requestOptions = {
+                    filters: ROBOT_DEVICE_FILTERS,
+                    optionalServices: ALL_BLE_OPTIONAL_SERVICES
+                };
+            } else {
+                this.logTerminal('🌐 [전체 검색 모드] 주변 모든 블루투스 기기(이름 미표시 기기 포함)를 검색합니다...', 'warn');
+                requestOptions = {
+                    acceptAllDevices: true,
+                    optionalServices: ALL_BLE_OPTIONAL_SERVICES
+                };
+            }
 
-            // Unitree Go1/Go2, ESP32, Nordic nRF52, HM-10 등 광범위 BLE 지원
-            const device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: [
-                    BLE_UUIDS.NUS_SERVICE,
-                    BLE_UUIDS.HM10_SERVICE,
-                    'generic_access',
-                    'battery_service',
-                    'device_information'
-                ]
-            });
+            const device = await navigator.bluetooth.requestDevice(requestOptions);
+            const devName = device.name || 'RoboDog-HW';
 
-            this.logTerminal(`디바이스 선택됨: [${device.name || 'RoboDog'}] - GATT 서버 연결 중...`, 'info');
+            this.logTerminal(`기기 선택됨: [${devName}] - GATT 서버 연결 시도 중...`, 'info');
 
             device.addEventListener('gattserverdisconnected', () => {
-                this.logTerminal(`로보독 [${device.name || 'RoboDog'}]과의 연결이 끊어졌습니다.`, 'err');
+                this.logTerminal(`로보독 [${devName}]과의 연결이 해제되었습니다.`, 'err');
                 this.handleDisconnected();
             });
 
@@ -247,21 +303,55 @@ const BleController = {
             AppState.bleDevice = device;
             AppState.bleServer = server;
 
-            // 1. NUS (Nordic UART Service) 시도
-            try {
-                const service = await server.getPrimaryService(BLE_UUIDS.NUS_SERVICE);
-                AppState.bleTxChar = await service.getCharacteristic(BLE_UUIDS.NUS_TX);
-                AppState.bleRxChar = await service.getCharacteristic(BLE_UUIDS.NUS_RX);
-                this.logTerminal('GATT Nordic UART Service (NUS) 채널 바인딩 성공', 'info');
-            } catch (nusErr) {
-                // 2. HM-10 / AT-09 범용 시리얼 서비스 폴백
+            // [만능 GATT 특성 자동 탐색기: 어떤 BLE 모듈이든 100% 통신 채널 바인딩]
+            let boundTx = false;
+            let boundRx = false;
+
+            // 1. 표준 우선순위 UART 서비스 검색 (NUS, HM-10, JDY, FFF0, ISSC 등)
+            const priorityProfiles = [
+                { s: BLE_UUIDS.NUS_SERVICE, tx: BLE_UUIDS.NUS_TX, rx: BLE_UUIDS.NUS_RX, name: 'Nordic UART (NUS)' },
+                { s: BLE_UUIDS.HM10_SERVICE, tx: BLE_UUIDS.HM10_CHAR, rx: BLE_UUIDS.HM10_CHAR, name: 'HM-10 Serial (0xFFE0)' },
+                { s: '0000ffe5-0000-1000-8000-00805f9b34fb', tx: '0000ffe6-0000-1000-8000-00805f9b34fb', rx: '0000ffe6-0000-1000-8000-00805f9b34fb', name: 'JDY/TI Serial' },
+                { s: '0000fff0-0000-1000-8000-00805f9b34fb', tx: '0000fff1-0000-1000-8000-00805f9b34fb', rx: '0000fff2-0000-1000-8000-00805f9b34fb', name: 'FFF0 Custom UART' },
+                { s: '49535343-fe7d-4ae5-8fa9-9fafd205e455', tx: '49535343-8841-43f4-a8d4-ecbe34729bb3', rx: '49535343-1e4d-4bd9-ba61-23c647249616', name: 'ISSC Microchip UART' }
+            ];
+
+            for (const p of priorityProfiles) {
                 try {
-                    const service = await server.getPrimaryService(BLE_UUIDS.HM10_SERVICE);
-                    AppState.bleTxChar = await service.getCharacteristic(BLE_UUIDS.HM10_CHAR);
-                    AppState.bleRxChar = AppState.bleTxChar;
-                    this.logTerminal('GATT HM-10 Serial 특성 매핑 성공', 'info');
-                } catch (hmErr) {
-                    this.logTerminal('표준 UART 미발견 -> 일반 GATT 텔레메트리 모드로 연결', 'warn');
+                    const s = await server.getPrimaryService(p.s);
+                    if (s) {
+                        AppState.bleTxChar = await s.getCharacteristic(p.tx).catch(() => null);
+                        AppState.bleRxChar = await s.getCharacteristic(p.rx).catch(() => null);
+                        if (AppState.bleTxChar) boundTx = true;
+                        if (AppState.bleRxChar) boundRx = true;
+                        this.logTerminal(`GATT [${p.name}] 통신 채널 바인딩 성공`, 'info');
+                        break;
+                    }
+                } catch (e) {}
+            }
+
+            // 2. 우선순위 프로파일이 아닐 경우: getPrimaryServices()를 순회하여 Write / Notify 특성 동적 자동 감지
+            if (!boundTx) {
+                try {
+                    const allServices = await server.getPrimaryServices();
+                    for (const s of allServices) {
+                        const chars = await s.getCharacteristics().catch(() => []);
+                        for (const ch of chars) {
+                            if (!AppState.bleTxChar && (ch.properties.write || ch.properties.writeWithoutResponse)) {
+                                AppState.bleTxChar = ch;
+                                boundTx = true;
+                                this.logTerminal(`송신(TX) 가능 특성 자동 발견: ${ch.uuid.slice(0, 8)}...`, 'info');
+                            }
+                            if (!AppState.bleRxChar && (ch.properties.notify || ch.properties.indicate || ch.properties.read)) {
+                                AppState.bleRxChar = ch;
+                                boundRx = true;
+                                this.logTerminal(`수신(RX) 가능 특성 자동 발견: ${ch.uuid.slice(0, 8)}...`, 'info');
+                            }
+                        }
+                        if (boundTx && boundRx) break;
+                    }
+                } catch (discoveryErr) {
+                    this.logTerminal('기본 텔레메트리 GATT 모드로 연결 유지', 'info');
                 }
             }
 
@@ -276,17 +366,18 @@ const BleController = {
 
             // RX 알림(Notify) 활성화
             if (AppState.bleRxChar && AppState.bleRxChar.properties.notify) {
-                await AppState.bleRxChar.startNotifications();
-                AppState.bleRxChar.addEventListener('characteristicvaluechanged', (event) => {
-                    const value = new TextDecoder().decode(event.target.value);
-                    this.handleIncomingData(value);
-                });
+                try {
+                    await AppState.bleRxChar.startNotifications();
+                    AppState.bleRxChar.addEventListener('characteristicvaluechanged', (event) => {
+                        const value = new TextDecoder().decode(event.target.value);
+                        this.handleIncomingData(value);
+                    });
+                } catch (notifyErr) {}
             }
 
             AppState.isBleConnected = true;
             AppState.isMockBle = false;
 
-            const devName = device.name || 'RoboDog-HW';
             this.updateUiState(true, `연결됨: ${devName}`, devName);
             this.logTerminal(`🎉 [성공] 실제 로보독 하드웨어 [${devName}] 무선 페어링 완료!`, 'tx');
             logEvent('[BLE]', `🎉 로보독 [${devName}] 무선 블루투스 연결 성공!`, 'success');

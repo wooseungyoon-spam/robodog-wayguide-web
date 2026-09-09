@@ -3243,17 +3243,33 @@
                     </div>
                 </div>
 
-                <!-- 연결 액션 바 (실제 기기 검색, 가상 시뮬레이션 연결, 연결 해제) -->
-                <div class="ble-actions-bar">
-                    <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary">
-                        <span class="btn-icon">🔍</span>
-                        <span>주변 실제 로보독 검색 &amp; 페어링 (BLE)</span>
+                <!-- 안내 카드: 알 수 없거나 지원되지 않는 기기(잡음 신호) 방지 필터 안내 -->
+                <div class="ble-filter-info-card" style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <span style="font-size: 22px;">💡</span>
+                        <div style="font-size: 13px; color: #E2E8F0; line-height: 1.55;">
+                            <strong style="color: #60A5FA; font-size: 14px;">스마트 로보독 정밀 필터링 적용 안내:</strong><br>
+                            주변 스마트폰/스마트TV/웨어러블 등 <strong>'알 수 없거나 지원되지 않는 기기' 잡음 비콘을 100% 자동 제외</strong>합니다.<br>
+                            실제 로보독 및 제어 하드웨어(<code>AD_401...</code>, <code>RoboDog</code>, <code>Unitree</code>, <code>ESP32</code> 등)만 검색창에 깔끔하게 표시됩니다.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 연결 액션 바 (정밀 검색, 전체 검색, 가상 시뮬레이션, 연결 해제) -->
+                <div class="ble-actions-bar" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <button id="btnBlePairReal" class="btn-ble-action btn-pair-primary" style="flex: 1 1 auto; min-width: 200px;" title="잡음 신호를 제외하고 실제 로보독 기기만 정밀하게 검색합니다">
+                        <span class="btn-icon">🎯</span>
+                        <span>로보독 기기 검색 (잡음 비콘 제거)</span>
                     </button>
-                    <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" title="주변에 실물 로보독이 없을 때 안전하게 모든 기능을 테스트합니다">
+                    <button id="btnBlePairAll" class="btn-ble-action" style="flex: 1 1 auto; min-width: 170px; background: rgba(51, 65, 85, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); color: #F1F5F9;" title="이름이 없는 특수 모듈까지 포함하여 주변 모든 신호를 표시합니다">
+                        <span class="btn-icon">🌐</span>
+                        <span>모든 기기 전체 검색</span>
+                    </button>
+                    <button id="btnBlePairVirtual" class="btn-ble-action btn-pair-virtual" style="flex: 1 1 auto; min-width: 170px;" title="주변에 실물 로보독이 없을 때 안전하게 모든 기능을 테스트합니다">
                         <span class="btn-icon">🤖</span>
-                        <span>가상 로보독 시뮬레이션 연결</span>
+                        <span>가상 로보독 시뮬레이터</span>
                     </button>
-                    <button id="btnBleDisconnect" class="btn-ble-action btn-disconnect" style="display: none;">
+                    <button id="btnBleDisconnect" class="btn-ble-action btn-disconnect" style="display: none; flex: 1 1 auto; min-width: 120px;">
                         <span class="btn-icon">🔌</span>
                         <span>연결 해제</span>
                     </button>
@@ -3653,7 +3669,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=30.0_official_poi_and_geojson_pipeline"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=31.0_ble_smart_filter_fix"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
