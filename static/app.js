@@ -651,16 +651,31 @@ const BleController = {
      * 로보독에 UART 제어 패킷 전송 (실제 하드웨어 or 가상)
      */
     async sendPacket(command) {
-        const fullPacket = `${command}\n`;
-        this.logTerminal(`[TX 송신] >> ${command}`, 'tx');
+        // [만능 프로토콜 어댑터] micro:bit / 코코아팹 로보독 펌웨어 맞춤 다중 포맷 패킷 생성 (F, 1, CMD:FORWARD 등 동시 지원)
+        let packetsToSend = [`${command}\n`];
+        if (command === 'CMD:FORWARD') {
+            packetsToSend = ['F\n', '1\n', 'CMD:FORWARD\n', 'forward\n'];
+        } else if (command === 'CMD:BACKWARD') {
+            packetsToSend = ['B\n', '2\n', 'CMD:BACKWARD\n', 'backward\n'];
+        } else if (command === 'CMD:TURN_LEFT') {
+            packetsToSend = ['L\n', '3\n', 'CMD:TURN_LEFT\n', 'left\n'];
+        } else if (command === 'CMD:TURN_RIGHT') {
+            packetsToSend = ['R\n', '4\n', 'CMD:TURN_RIGHT\n', 'right\n'];
+        } else if (command === 'CMD:STOP') {
+            packetsToSend = ['S\n', '0\n', 'CMD:STOP\n', 'stop\n'];
+        }
+
+        this.logTerminal(`[TX 송신] >> ${command} (${packetsToSend[0].trim()})`, 'tx');
         logEvent('[BLE]', `[TX 송신] >> ${command}`, 'info');
 
-        // 1. [유선] 노트북 USB 시리얼 포트로 직접 패킷 전송
+        // 1. [유선/동글] 노트북 USB 시리얼 포트로 직접 패킷 전송
         if (AppState.isUsbConnected && AppState.serialPort && AppState.serialPort.writable) {
             try {
                 const encoder = new TextEncoder();
                 const writer = AppState.serialPort.writable.getWriter();
-                await writer.write(encoder.encode(fullPacket));
+                for (const pkt of packetsToSend) {
+                    await writer.write(encoder.encode(pkt));
+                }
                 writer.releaseLock();
             } catch (usbErr) {
                 console.warn('USB 시리얼 송신 오류:', usbErr);
@@ -679,19 +694,22 @@ const BleController = {
             return;
         }
 
-        try {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(fullPacket);
-            
-            if (AppState.bleTxChar.properties.writeWithoutResponse) {
-                await AppState.bleTxChar.writeValueWithoutResponse(data);
-            } else {
-                await AppState.bleTxChar.writeValue(data);
+        if (AppState.bleTxChar) {
+            try {
+                const encoder = new TextEncoder();
+                for (const pkt of packetsToSend) {
+                    const data = encoder.encode(pkt);
+                    if (AppState.bleTxChar.properties.writeWithoutResponse) {
+                        await AppState.bleTxChar.writeValueWithoutResponse(data);
+                    } else {
+                        await AppState.bleTxChar.writeValue(data);
+                    }
+                }
+            } catch (err) {
+                this.logTerminal(`BLE 패킷 전송 오류: ${err.message}`, 'err');
+                logEvent('[ERROR]', `BLE 패킷 전송 실패: ${err.message}`, 'error');
+                this.mockResponse(command);
             }
-        } catch (err) {
-            this.logTerminal(`BLE 패킷 전송 오류: ${err.message}`, 'err');
-            logEvent('[ERROR]', `BLE 패킷 전송 실패: ${err.message}`, 'error');
-            this.mockResponse(command);
         }
     },
 
