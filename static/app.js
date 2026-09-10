@@ -688,26 +688,26 @@ const BleController = {
      * 로보독에 UART 제어 패킷 전송 (실제 하드웨어 or 가상)
      */
     async sendPacket(command) {
-        // [만능 프로토콜 어댑터] micro:bit / 코코아팹 로보독 펌웨어 맞춤 다중 포맷 패킷 생성 (CRLF, LF, 단일 문자 동시 지원)
-        let packetsToSend = [`${command}\r\n`, `${command}\n`];
+        // [클린 프로토콜 어댑터] micro:bit 단일 줄바꿈(\n) 맞춤 최적화 패킷
         const cmdStr = String(command);
+        let singlePkt = `${command}\n`;
         if (cmdStr === 'CMD:FORWARD' || cmdStr === 'CMD:SIGNAL_START' || cmdStr === 'CMD:RESUME' || cmdStr.startsWith('CMD:START')) {
-            packetsToSend = ['F\r\n', 'F\n', 'F', '1\r\n', '1\n', '1', 'CMD:FORWARD\r\n', 'forward\r\n'];
+            singlePkt = 'F\n';
         } else if (cmdStr === 'CMD:BACKWARD') {
-            packetsToSend = ['B\r\n', 'B\n', 'B', '2\r\n', '2\n', '2', 'CMD:BACKWARD\r\n', 'backward\r\n'];
+            singlePkt = 'B\n';
         } else if (cmdStr === 'CMD:TURN_LEFT' || cmdStr === 'CMD:LEFT') {
-            packetsToSend = ['L\r\n', 'L\n', 'L', '3\r\n', '3\n', '3', 'CMD:TURN_LEFT\r\n', 'left\r\n'];
+            singlePkt = 'L\n';
         } else if (cmdStr === 'CMD:TURN_RIGHT' || cmdStr === 'CMD:RIGHT') {
-            packetsToSend = ['R\r\n', 'R\n', 'R', '4\r\n', '4\n', '4', 'CMD:TURN_RIGHT\r\n', 'right\r\n'];
+            singlePkt = 'R\n';
         } else if (cmdStr === 'CMD:STOP' || cmdStr === 'CMD:SIGNAL_STOP' || cmdStr === 'CMD:PAUSE' || cmdStr === 'CMD:E-STOP') {
-            packetsToSend = ['S\r\n', 'S\n', 'S', '0\r\n', '0\n', '0', 'CMD:STOP\r\n', 'stop\r\n'];
+            singlePkt = 'S\n';
         }
 
         // [실제 로보독 뷰 HUD 인디케이터 동기화]
         try {
             const txIndicator = document.getElementById('realPacketTxIndicator');
             if (txIndicator) {
-                txIndicator.textContent = `[TX] ${packetsToSend[0].trim()}`;
+                txIndicator.textContent = `[TX] ${singlePkt.trim()}`;
                 txIndicator.className = 'badge badge-green';
             }
             const liveBadge = document.getElementById('realLiveMotorBadge');
@@ -733,17 +733,15 @@ const BleController = {
             }
         } catch (uiErr) {}
 
-        this.logTerminal(`[TX 송신] >> ${command} (${packetsToSend[0].trim()})`, 'tx');
-        logEvent('[BLE]', `[TX 송신] >> ${command}`, 'info');
+        this.logTerminal(`[TX 송신] >> ${command} (${singlePkt.trim()})`, 'tx');
+        logEvent('[BLE]', `[TX 송신] >> ${command} (${singlePkt.trim()})`, 'info');
 
-        // 1. [유선/동글] 노트북 USB 시리얼 포트로 직접 패킷 전송
+        // 1. [유선/동글] 노트북 USB 시리얼 포트로 직접 패킷 전송 (단일 패킷으로 micro:bit 버퍼 오버플로우 방지)
         if (AppState.isUsbConnected && AppState.serialPort && AppState.serialPort.writable) {
             try {
                 const encoder = new TextEncoder();
                 const writer = AppState.serialPort.writable.getWriter();
-                for (const pkt of packetsToSend) {
-                    await writer.write(encoder.encode(pkt));
-                }
+                await writer.write(encoder.encode(singlePkt));
                 writer.releaseLock();
             } catch (usbErr) {
                 console.warn('USB 시리얼 송신 오류:', usbErr);
@@ -5515,6 +5513,13 @@ async function startNavigation(destName, ttsMessage, explicitCoords = null) {
 
     if (AppState.currentMode === 'blind' || AppState.isBlindMode) {
         BlindTouchManager.startGuide(verifiedName);
+        return;
+    }
+
+    // [신규] 실제 로보독 모드에서 하드웨어가 아직 연결되지 않았을 때 가상으로만 달리는 현상 방지
+    if (AppState.opMode === 'real' && !AppState.isUsbConnected && !AppState.bleTxChar) {
+        alert('⚠️ 로보독 하드웨어가 아직 연결되지 않았습니다!\n\n상단 카드의 [노트북 USB 동글 연결] 또는 [블루투스(BLE) 검색] 버튼을 눌러 COM 포트를 먼저 연결해 주세요.\n(연결 후 목적지를 다시 누르시면 로보독이 실제로 출발합니다!)');
+        logEvent('[ROBODOG]', '⚠️ 하드웨어 미연결: 로보독 연결 후 목적지를 설정해 주세요.', 'warn');
         return;
     }
 
