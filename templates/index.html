@@ -2315,25 +2315,24 @@
                     <button id="btnRealVoiceMic" class="real-mic-btn" type="button" aria-label="음성으로 목적지 말하기">
                         <span>🎤</span>
                     </button>
-                    <div id="realVoicePrompt" class="real-voice-prompt">마이크를 누르고 목적지를 말씀하세요</div>
-                    <div class="real-voice-sub">예: "세종대학교 대양AI관 가자", "어린이대공원역 가자"</div>
+                    <div id="realVoicePrompt" class="real-voice-prompt">경기장 매트 목적지를 말씀하세요</div>
+                    <div class="real-voice-sub">예: "병원 가자", "지하철역 가자", "물류센터 가자", "우리집 가자"</div>
                     
                     <div id="realVoiceTranscript" class="real-voice-transcript">
-                        <span>🎙️ 음성 대기 중... 버튼을 누르면 음성을 인식합니다.</span>
+                        <span>🎙️ 음성 대기 중... 마이크를 누르고 목적지를 말씀하세요.</span>
                     </div>
 
-                    <!-- 원터치 빠른 목적지 칩 -->
+                    <!-- 대회장 매트 원터치 목적지 칩 -->
                     <div class="real-dest-chips">
-                        <button class="real-dest-chip" type="button" data-dest="세종대학교 대양AI관">🏫 대양AI관</button>
-                        <button class="real-dest-chip" type="button" data-dest="어린이대공원역 (7호선)">🚇 어린이대공원역</button>
-                        <button class="real-dest-chip" type="button" data-dest="세종대학교 정문">🏛️ 세종대 정문</button>
-                        <button class="real-dest-chip" type="button" data-dest="수지 온누리약국">💊 약국</button>
-                        <button class="real-dest-chip" type="button" data-dest="우리집">🏡 우리집</button>
+                        <button class="real-dest-chip" type="button" data-dest="병원">🏥 병원 (Hospital)</button>
+                        <button class="real-dest-chip" type="button" data-dest="지하철역">🚇 지하철역 (Metro)</button>
+                        <button class="real-dest-chip" type="button" data-dest="물류센터">📦 물류센터 (Logistics)</button>
+                        <button class="real-dest-chip" type="button" data-dest="스마트아파트">🏡 스마트단지/우리집</button>
                     </div>
 
                     <!-- 텍스트 검색 폴백 입력창 -->
                     <div class="real-search-input-row">
-                        <input id="inputRealSearch" class="real-search-input" type="text" placeholder="직접 목적지 입력 (예: 세종대학교, 어린이대공원역)">
+                        <input id="inputRealSearch" class="real-search-input" type="text" placeholder="직접 목적지 입력 (예: 병원, 지하철역, 물류센터)">
                         <button id="btnRealSearchRoute" class="btn-real-hw primary" style="flex: 0 0 100px;" type="button">
                             <span>🔍 탐색</span>
                         </button>
@@ -2350,7 +2349,7 @@
                         <span>🛑</span>
                         <span id="realLiveMotorText">로보독 정지 대기 중 [S]</span>
                     </div>
-                    <span id="realAutopilotModeBadge" class="badge badge-green">자율 주행 시스템 준비됨</span>
+                    <span id="realAutopilotModeBadge" class="badge badge-green">피지컬 AI 자율주행 준비됨</span>
                 </div>
                 
                 <div class="real-hud-actions">
@@ -2358,7 +2357,7 @@
                         <span>⏸️ 일시 정지 (S)</span>
                     </button>
                     <button id="btnRealNavResume" class="btn-hud-action btn-hud-resume" type="button">
-                        <span>▶️ 전진 재개 (F)</span>
+                        <span>▶️ 주행 재개 (F)</span>
                     </button>
                     <button id="btnRealNavStop" class="btn-hud-action btn-hud-stop" type="button">
                         <span>⏹️ 안내 종료</span>
@@ -2368,28 +2367,92 @@
 
             <div class="real-hud-instruction" id="realHudInstruction">
                 <span>⬆️</span>
-                <span id="realHudInstructionText">목적지를 설정하면 실시간 안내 및 모터 제어가 시작됩니다.</span>
+                <span id="realHudInstructionText">목적지를 음성 또는 클릭으로 선택하면 좌표를 환산하여 모터 주행을 시작합니다.</span>
             </div>
 
             <div class="real-hud-subinfo">
-                <span>목적지: <strong id="realHudDestName">미설정</strong></span>
+                <span>목표 지점: <strong id="realHudDestName">미설정</strong></span>
                 <span>남은 거리: <strong id="realHudRemainDist">-</strong></span>
                 <span>예상 시간: <strong id="realHudRemainTime">-</strong></span>
-                <span>전방 신호등: <strong id="realHudSignalText">안전 인도 구간</strong></span>
+                <span>횡단보도 신호: <strong id="realHudSignalText">안전 구역</strong></span>
             </div>
         </div>
 
-        <!-- 4. 실시간 OpenStreetMap / Leaflet 도로 지도 래퍼 -->
-        <div class="real-robot-card" style="padding: 12px;">
-            <div class="real-card-header" style="margin-bottom: 8px;">
+        <!-- 4. [신규] 🏆 해커톤 경기장 매트 (AI 동행 프로젝트) 및 실시간 좌표 관제 -->
+        <div class="real-robot-card" style="padding: 16px;">
+            <div class="real-card-header" style="margin-bottom: 12px;">
                 <div class="real-card-title">
-                    <span>🗺️</span>
-                    <span>실제 보행 도로 지도 & 로보독 실시간 위치 추적</span>
+                    <span>🏆</span>
+                    <span>해커톤 경기장 매트 (AI 동행 프로젝트 피지컬AI) & 실시간 좌표 관제</span>
                 </div>
-                <span class="badge badge-blue">C-ITS 실시간 신호등 연동</span>
+                <span class="badge badge-blue">실제 대회장 매트 1:1 동기화</span>
             </div>
-            <div id="realRobotMapWrapper" class="real-map-wrapper">
-                <!-- realMapContainer가 동적으로 여기로 마운트됩니다 -->
+
+            <!-- 매트 그래픽 & 실시간 위치 뷰어 -->
+            <div id="matViewBox" class="mat-view-box">
+                <img src="{{ url_for('static', filename='hackathon_mat.jpg') }}" alt="AI 동행 프로젝트 경기장 매트" class="mat-background-img">
+                
+                <!-- 경로 궤적 SVG 오버레이 -->
+                <svg id="matOverlaySvg" class="mat-overlay-svg" viewBox="0 0 1000 750" preserveAspectRatio="none">
+                    <polyline id="matRouteLine" points="" fill="none" stroke="#2563EB" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 5" opacity="0.85" />
+                </svg>
+
+                <!-- 매트 위 주요 거점 핀 -->
+                <div class="mat-dest-pin" style="left: 78%; top: 86%;" data-dest="START" title="출발지">
+                    <div class="pin-bubble" style="background: #059669; border-color: #34D399;">
+                        <span class="pin-icon">🚩</span>
+                        <span>출발 (START)</span>
+                    </div>
+                </div>
+                <div class="mat-dest-pin" style="left: 76%; top: 60%;" data-dest="병원" title="병원으로 가기">
+                    <div class="pin-bubble">
+                        <span class="pin-icon">🏥</span>
+                        <span>병원</span>
+                    </div>
+                </div>
+                <div class="mat-dest-pin" style="left: 24%; top: 22%;" data-dest="지하철역" title="지하철역으로 가기">
+                    <div class="pin-bubble">
+                        <span class="pin-icon">🚇</span>
+                        <span>지하철역</span>
+                    </div>
+                </div>
+                <div class="mat-dest-pin" style="left: 23%; top: 74%;" data-dest="물류센터" title="물류센터로 가기">
+                    <div class="pin-bubble">
+                        <span class="pin-icon">📦</span>
+                        <span>물류센터</span>
+                    </div>
+                </div>
+                <div class="mat-dest-pin" style="left: 75%; top: 20%;" data-dest="스마트아파트" title="스마트단지/우리집으로 가기">
+                    <div class="pin-bubble">
+                        <span class="pin-icon">🏡</span>
+                        <span>우리집/단지</span>
+                    </div>
+                </div>
+
+                <!-- 실시간 로보독 마커 -->
+                <div id="matRobotMarker" class="mat-robot-marker" style="left: 78%; top: 86%;">
+                    <span>🐕</span>
+                </div>
+            </div>
+
+            <!-- 목적지 좌표 환산 정보 패널 -->
+            <div class="mat-coord-panel">
+                <div class="coord-item">
+                    <span class="coord-label">현재 로보독 좌표 (X, Y)</span>
+                    <span id="coordCurrentPos" class="coord-value">X: 780mm, Y: 860mm</span>
+                </div>
+                <div class="coord-item">
+                    <span class="coord-label">목표 거점 환산 좌표 (X, Y)</span>
+                    <span id="coordTargetPos" class="coord-value">미설정</span>
+                </div>
+                <div class="coord-item">
+                    <span class="coord-label">모션 플래너 계획 단계</span>
+                    <span id="coordMotionStep" class="coord-value">출발 대기 중</span>
+                </div>
+                <div class="coord-item">
+                    <span class="coord-label">로보독 무선 모터 명령</span>
+                    <span id="coordMotorPkt" class="coord-value">[TX] 정지 (S)</span>
+                </div>
             </div>
         </div>
 

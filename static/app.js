@@ -763,13 +763,11 @@ const BleController = {
         if (AppState.bleTxChar) {
             try {
                 const encoder = new TextEncoder();
-                for (const pkt of packetsToSend) {
-                    const data = encoder.encode(pkt);
-                    if (AppState.bleTxChar.properties.writeWithoutResponse) {
-                        await AppState.bleTxChar.writeValueWithoutResponse(data);
-                    } else {
-                        await AppState.bleTxChar.writeValue(data);
-                    }
+                const data = encoder.encode(singlePkt);
+                if (AppState.bleTxChar.properties.writeWithoutResponse) {
+                    await AppState.bleTxChar.writeValueWithoutResponse(data);
+                } else {
+                    await AppState.bleTxChar.writeValue(data);
                 }
             } catch (err) {
                 this.logTerminal(`BLE 패킷 전송 오류: ${err.message}`, 'err');
@@ -5467,6 +5465,14 @@ async function startNavigation(destName, ttsMessage, explicitCoords = null) {
         return;
     }
 
+    // [신규] 실제 로보독 모드: 해커톤 경기장 매트 좌표 환산 자율주행 실행 (가상 세종대 네비게이션과 100% 분리)
+    if (AppState.opMode === 'real') {
+        if (typeof HackathonMatNavigator !== 'undefined') {
+            HackathonMatNavigator.navigate(destName);
+        }
+        return;
+    }
+
     let targetPlace = explicitCoords;
 
     // 만약 사전에 검증된 좌표가 없다면, 공식 POI 검색 API(/api/places/search)를 호출하여 1:1 검증
@@ -5513,13 +5519,6 @@ async function startNavigation(destName, ttsMessage, explicitCoords = null) {
 
     if (AppState.currentMode === 'blind' || AppState.isBlindMode) {
         BlindTouchManager.startGuide(verifiedName);
-        return;
-    }
-
-    // [신규] 실제 로보독 모드에서 하드웨어가 아직 연결되지 않았을 때 가상으로만 달리는 현상 방지
-    if (AppState.opMode === 'real' && !AppState.isUsbConnected && !AppState.bleTxChar) {
-        alert('⚠️ 로보독 하드웨어가 아직 연결되지 않았습니다!\n\n상단 카드의 [노트북 USB 동글 연결] 또는 [블루투스(BLE) 검색] 버튼을 눌러 COM 포트를 먼저 연결해 주세요.\n(연결 후 목적지를 다시 누르시면 로보독이 실제로 출발합니다!)');
-        logEvent('[ROBODOG]', '⚠️ 하드웨어 미연결: 로보독 연결 후 목적지를 설정해 주세요.', 'warn');
         return;
     }
 
@@ -5700,9 +5699,6 @@ function switchOpMode(mode) {
     const tabSim = document.getElementById('tabOpVirtualSim');
     const realSec = document.getElementById('realRobotSection');
     const simSec = document.getElementById('virtualSimulatorSection');
-    const realMapEl = document.getElementById('realMapContainer');
-    const realMapWrapper = document.getElementById('realRobotMapWrapper');
-    const virtualMapBox = document.querySelector('#generalView .map-box');
 
     if (mode === 'real') {
         if (tabReal) tabReal.classList.add('active');
@@ -5710,22 +5706,14 @@ function switchOpMode(mode) {
         if (realSec) realSec.style.display = 'flex';
         if (simSec) simSec.style.display = 'none';
 
-        // 지도를 실제 로보독 전용 래퍼로 이동 마운트
-        if (realMapEl && realMapWrapper && realMapEl.parentElement !== realMapWrapper) {
-            realMapWrapper.appendChild(realMapEl);
-        }
-        logEvent('[OP-MODE]', '🐕 [실제 로보독 모드] 활성화: 현장 해커톤 micro:bit 자율 주행 및 음성 관제 가동', 'success');
+        logEvent('[OP-MODE]', '🐕 [실제 로보독 모드] 활성화: 해커톤 경기장 매트 좌표 자율주행 및 실시간 모터 관제 가동', 'success');
     } else {
         if (tabReal) tabReal.classList.remove('active');
         if (tabSim) tabSim.classList.add('active');
         if (realSec) realSec.style.display = 'none';
         if (simSec) simSec.style.display = 'block';
 
-        // 지도를 가상 시뮬레이터 일반 뷰의 맵 박스로 복귀 마운트
-        if (realMapEl && virtualMapBox && realMapEl.parentElement !== virtualMapBox) {
-            virtualMapBox.appendChild(realMapEl);
-        }
-        logEvent('[OP-MODE]', '🖥️ [가상 시뮬레이터 모드] 활성화: 디지털 트윈 가상 주행 모드 전환', 'info');
+        logEvent('[OP-MODE]', '🖥️ [가상 시뮬레이터 모드] 활성화: 세종대 실 도로 지도 & 디지털 트윈 가상 주행 모드 전환', 'info');
     }
 
     // Leaflet 지도 크기 리사이즈 보정
@@ -5737,7 +5725,368 @@ function switchOpMode(mode) {
 }
 
 // ---------------------------------------------------------
-// 11-2. [신규] 🐕 실제 로보독 자율주행 & 음성 관제 매니저 (RealRobotAutoPilot)
+// 11-2. [신규] 🏆 해커톤 경기장 매트(AI 동행 프로젝트) 좌표 환산 자율주행 플래너
+// ---------------------------------------------------------
+const HackathonMatNavigator = {
+    // 경기장 매트 주요 거점 (실제 크기 mm 환산 및 뷰 박스 백분율 %)
+    destinations: {
+        'START': {
+            name: '출발지 (START)',
+            xMm: 780,
+            yMm: 860,
+            pctX: 78,
+            pctY: 86,
+            description: '대회장 매트 출발선'
+        },
+        '병원': {
+            name: '병원 (Hospital)',
+            xMm: 760,
+            yMm: 600,
+            pctX: 76,
+            pctY: 60,
+            distMm: 260,
+            timeSec: 3,
+            voiceIntro: '병원으로 목적지 좌표를 환산했습니다. 로보독이 직진 주행을 시작합니다.',
+            voiceArrival: '병원에 안전하게 도착했습니다. 안내를 완료합니다.',
+            routePoints: [
+                { pctX: 78, pctY: 86 },
+                { pctX: 76, pctY: 60 }
+            ],
+            steps: [
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 병원 방면 직진 주행 중 (260mm)...', duration: 3200, pctX: 76, pctY: 60, mmX: 760, mmY: 600, signal: '안전 보도' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '2단계: 🏥 병원 도착 완료! 모터 정지', duration: 0, pctX: 76, pctY: 60, mmX: 760, mmY: 600, signal: '도착 완료' }
+            ]
+        },
+        '지하철역': {
+            name: '지하철역 (Metro)',
+            xMm: 240,
+            yMm: 220,
+            pctX: 24,
+            pctY: 22,
+            distMm: 850,
+            timeSec: 12,
+            voiceIntro: '지하철역으로 이동합니다. 전방 횡단보도 신호를 감지하며 안전하게 주행합니다.',
+            voiceArrival: '지하철역에 무사히 도착했습니다. 안내를 완료합니다.',
+            routePoints: [
+                { pctX: 78, pctY: 86 },
+                { pctX: 76, pctY: 52 },
+                { pctX: 52, pctY: 52 },
+                { pctX: 52, pctY: 22 },
+                { pctX: 24, pctY: 22 }
+            ],
+            steps: [
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 교차로 진입로 직진 주행 (150mm)', duration: 2200, pctX: 76, pctY: 52, mmX: 760, mmY: 520, signal: '안전 보도' },
+                { cmd: 'CMD:TURN_LEFT', pkt: 'L', desc: '2단계: 횡단보도 방향 좌회전 선회', duration: 1100, pctX: 72, pctY: 52, mmX: 720, mmY: 520, signal: '좌회전 선회' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 횡단보도 정지선 앞 접근 주행 (200mm)', duration: 2400, pctX: 52, pctY: 52, mmX: 520, mmY: 520, signal: '횡단보도 접근' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 🛑 횡단보도 적색 신호 감지! 정지선 대기', duration: 2800, pctX: 52, pctY: 52, mmX: 520, mmY: 520, signal: '🛑 적색 신호 (정지 대기)' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '5단계: 🟢 초록불 확인! 횡단보도 통과 및 지하철역 진입 (380mm)', duration: 3200, pctX: 24, pctY: 22, mmX: 240, mmY: 220, signal: '🟢 초록불 (안전 통과)' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '6단계: 🚇 지하철역 도착 완료! 모터 정지', duration: 0, pctX: 24, pctY: 22, mmX: 240, mmY: 220, signal: '도착 완료' }
+            ]
+        },
+        '물류센터': {
+            name: '물류센터 (Logistics)',
+            xMm: 230,
+            yMm: 740,
+            pctX: 23,
+            pctY: 74,
+            distMm: 620,
+            timeSec: 8,
+            voiceIntro: '물류센터로 좌표를 환산했습니다. 운송로를 따라 물류센터로 이동합니다.',
+            voiceArrival: '물류센터 하역장에 안전하게 도착했습니다.',
+            routePoints: [
+                { pctX: 78, pctY: 86 },
+                { pctX: 78, pctY: 74 },
+                { pctX: 23, pctY: 74 }
+            ],
+            steps: [
+                { cmd: 'CMD:TURN_LEFT', pkt: 'L', desc: '1단계: 물류 전용 운송로 방향 좌회전', duration: 1100, pctX: 78, pctY: 74, mmX: 780, mmY: 740, signal: '방향 정렬' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '2단계: 물류센터 직통 도로 주행 (550mm)', duration: 4200, pctX: 35, pctY: 74, mmX: 350, mmY: 740, signal: '운송 주행' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 물류센터 하역장 입구 서행 진입 (70mm)', duration: 1200, pctX: 23, pctY: 74, mmX: 230, mmY: 740, signal: '하역장 진입' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 📦 물류센터 도착 완료! 모터 정지', duration: 0, pctX: 23, pctY: 74, mmX: 230, mmY: 740, signal: '도착 완료' }
+            ]
+        },
+        '스마트아파트': {
+            name: '스마트단지 / 우리집',
+            xMm: 750,
+            yMm: 200,
+            pctX: 75,
+            pctY: 20,
+            distMm: 660,
+            timeSec: 8,
+            voiceIntro: '우리집 스마트아파트 단지로 길안내를 시작합니다.',
+            voiceArrival: '스마트단지 우리집에 안전하게 도착했습니다. 편안한 시간 되세요!',
+            routePoints: [
+                { pctX: 78, pctY: 86 },
+                { pctX: 76, pctY: 52 },
+                { pctX: 75, pctY: 20 }
+            ],
+            steps: [
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 중앙 도로를 따라 직진 주행 (340mm)', duration: 3200, pctX: 76, pctY: 52, mmX: 760, mmY: 520, signal: '중앙 도로' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '2단계: 단지 출입구 보안 확인 및 일시 대기', duration: 1500, pctX: 76, pctY: 52, mmX: 760, mmY: 520, signal: '출입 확인' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 아파트 동 입구로 진입 (320mm)', duration: 3000, pctX: 75, pctY: 20, mmX: 750, mmY: 200, signal: '단지 내부' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 🏡 우리집 도착 완료! 모터 정지', duration: 0, pctX: 75, pctY: 20, mmX: 750, mmY: 200, signal: '도착 완료' }
+            ]
+        }
+    },
+
+    currentPos: { mmX: 780, mmY: 860, pctX: 78, pctY: 86 },
+    activeDestKey: null,
+    activeStepIdx: 0,
+    stepTimer: null,
+    isNavigating: false,
+    isPaused: false,
+    stepStartTime: 0,
+    stepRemainingMs: 0,
+
+    resolveDestKey(query) {
+        if (!query) return '병원';
+        const q = String(query).trim().toLowerCase();
+        if (q === 'start' || q === '시작' || q === '출발' || q.includes('리셋')) return 'START';
+        if (q.includes('병원') || q.includes('약국') || q.includes('의원') || q.includes('치료') || q.includes('보건')) return '병원';
+        if (q.includes('역') || q.includes('지하철') || q.includes('전철') || q.includes('교통')) return '지하철역';
+        if (q.includes('물류') || q.includes('택배') || q.includes('센터') || q.includes('창고') || q.includes('배송')) return '물류센터';
+        if (q.includes('집') || q.includes('아파트') || q.includes('단지') || q.includes('스마트') || q.includes('홈') || q.includes('귀가')) return '스마트아파트';
+        return '병원';
+    },
+
+    resetToStart() {
+        this.stop();
+        this.currentPos = { mmX: 780, mmY: 860, pctX: 78, pctY: 86 };
+        this.updateRobotMarker(78, 86);
+        this.clearRouteLine();
+
+        const coordCur = document.getElementById('coordCurrentPos');
+        const coordTgt = document.getElementById('coordTargetPos');
+        const coordStep = document.getElementById('coordMotionStep');
+        const coordPkt = document.getElementById('coordMotorPkt');
+        if (coordCur) coordCur.textContent = 'X: 780mm, Y: 860mm (START)';
+        if (coordTgt) coordTgt.textContent = '출발 준비 완료';
+        if (coordStep) coordStep.textContent = '출발선 대기 중';
+        if (coordPkt) coordPkt.textContent = '[TX] 정지 (S)';
+
+        BleController.sendPacket('CMD:STOP');
+        VoiceEngine.speak('로보독 위치가 출발선으로 초기화되었습니다.');
+        logEvent('[MAT-NAV]', '🚩 로보독 출발선(START: 780mm, 860mm) 초기화 완료', 'info');
+    },
+
+    navigate(query) {
+        const destKey = this.resolveDestKey(query);
+        if (destKey === 'START') {
+            this.resetToStart();
+            return;
+        }
+
+        const dest = this.destinations[destKey];
+        if (!dest) return;
+
+        this.stop();
+        this.activeDestKey = destKey;
+        this.isNavigating = true;
+        this.isPaused = false;
+        AppState.isWalking = true;
+        AppState.currentDest = dest.name;
+
+        logEvent('[MAT-NAV]', `🎯 [목적지 좌표 환산] "${query}" -> [${dest.name}] (X: ${dest.xMm}mm, Y: ${dest.yMm}mm)`, 'success');
+
+        // 1. 매트 오버레이 SVG 경로 그리기
+        this.drawRouteLine(dest.routePoints);
+
+        // 2. 좌표 패널 업데이트
+        const coordTgt = document.getElementById('coordTargetPos');
+        if (coordTgt) coordTgt.textContent = `X: ${dest.xMm}mm, Y: ${dest.yMm}mm (${dest.name})`;
+
+        // 3. HUD 정보 업데이트
+        const hudDest = document.getElementById('realHudDestName');
+        const hudDist = document.getElementById('realHudRemainDist');
+        const hudTime = document.getElementById('realHudRemainTime');
+        const hudSignal = document.getElementById('realHudSignalText');
+        const hudInst = document.getElementById('realHudInstructionText');
+        const autoBadge = document.getElementById('realAutopilotModeBadge');
+
+        if (hudDest) hudDest.textContent = dest.name;
+        if (hudDist) hudDist.textContent = `${dest.distMm} mm`;
+        if (hudTime) hudTime.textContent = `약 ${dest.timeSec}초`;
+        if (hudSignal) hudSignal.textContent = '신호 및 경로 분석 중';
+        if (hudInst) hudInst.textContent = dest.voiceIntro;
+        if (autoBadge) {
+            autoBadge.className = 'badge badge-green';
+            autoBadge.textContent = '자율 주행 중';
+        }
+
+        // 4. 음성 안내
+        VoiceEngine.speak(dest.voiceIntro);
+
+        // 5. 시퀀스 단계 실행 시작
+        this.executeStep(destKey, 0);
+    },
+
+    drawRouteLine(points) {
+        const line = document.getElementById('matRouteLine');
+        if (!line || !points || points.length === 0) return;
+        const ptsStr = points.map(p => `${p.pctX * 10},${p.pctY * 7.5}`).join(' ');
+        line.setAttribute('points', ptsStr);
+    },
+
+    clearRouteLine() {
+        const line = document.getElementById('matRouteLine');
+        if (line) line.setAttribute('points', '');
+    },
+
+    updateRobotMarker(pctX, pctY) {
+        const marker = document.getElementById('matRobotMarker');
+        if (marker) {
+            marker.style.left = `${pctX}%`;
+            marker.style.top = `${pctY}%`;
+        }
+    },
+
+    executeStep(destKey, stepIdx) {
+        if (!this.isNavigating || this.isPaused) return;
+
+        const dest = this.destinations[destKey];
+        if (!dest || !dest.steps || stepIdx >= dest.steps.length) {
+            this.finishArrival(destKey);
+            return;
+        }
+
+        this.activeStepIdx = stepIdx;
+        const step = dest.steps[stepIdx];
+
+        // 1. 모터 패킷 방출 (F, L, R, S)
+        BleController.sendPacket(step.cmd);
+
+        // 2. 로보독 마커 위치 및 좌표 갱신
+        this.currentPos = { mmX: step.mmX, mmY: step.mmY, pctX: step.pctX, pctY: step.pctY };
+        this.updateRobotMarker(step.pctX, step.pctY);
+
+        const coordCur = document.getElementById('coordCurrentPos');
+        const coordStep = document.getElementById('coordMotionStep');
+        const coordPkt = document.getElementById('coordMotorPkt');
+        if (coordCur) coordCur.textContent = `X: ${step.mmX}mm, Y: ${step.mmY}mm`;
+        if (coordStep) coordStep.textContent = `[${stepIdx + 1}/${dest.steps.length}] ${step.desc}`;
+        if (coordPkt) coordPkt.textContent = `[TX] ${step.pkt} (${step.cmd})`;
+
+        // 3. HUD 정보 갱신
+        const hudInst = document.getElementById('realHudInstructionText');
+        const hudSignal = document.getElementById('realHudSignalText');
+        if (hudInst) hudInst.textContent = step.desc;
+        if (hudSignal) hudSignal.textContent = step.signal || '정상 주행';
+
+        logEvent('[MAT-NAV]', `🐾 단계 ${stepIdx + 1}/${dest.steps.length}: ${step.desc} (패킷: ${step.pkt}, ${step.duration}ms)`, 'info');
+
+        // 4. 다음 단계 예약
+        if (step.duration > 0) {
+            this.stepStartTime = Date.now();
+            this.stepRemainingMs = step.duration;
+            this.stepTimer = setTimeout(() => {
+                this.executeStep(destKey, stepIdx + 1);
+            }, step.duration);
+        } else {
+            this.finishArrival(destKey);
+        }
+    },
+
+    finishArrival(destKey) {
+        const dest = this.destinations[destKey];
+        this.isNavigating = false;
+        AppState.isWalking = false;
+
+        BleController.sendPacket('CMD:STOP');
+
+        const hudInst = document.getElementById('realHudInstructionText');
+        const hudDist = document.getElementById('realHudRemainDist');
+        const hudTime = document.getElementById('realHudRemainTime');
+        const hudSignal = document.getElementById('realHudSignalText');
+        const autoBadge = document.getElementById('realAutopilotModeBadge');
+        const coordStep = document.getElementById('coordMotionStep');
+        const coordPkt = document.getElementById('coordMotorPkt');
+
+        if (hudInst) hudInst.textContent = `🎉 [도착 완료] ${dest ? dest.name : '목적지'}에 안전하게 도착했습니다.`;
+        if (hudDist) hudDist.textContent = '0 mm';
+        if (hudTime) hudTime.textContent = '도착 완료';
+        if (hudSignal) hudSignal.textContent = '안내 종료';
+        if (autoBadge) {
+            autoBadge.className = 'badge badge-green';
+            autoBadge.textContent = '도착 완료 (대기)';
+        }
+        if (coordStep) coordStep.textContent = '목표 지점 도착 완료';
+        if (coordPkt) coordPkt.textContent = '[TX] S (안전 정지)';
+
+        if (dest && dest.voiceArrival) {
+            VoiceEngine.speak(dest.voiceArrival);
+        }
+
+        logEvent('[MAT-NAV]', `🎉 [도착 완료] ${dest ? dest.name : '목적지'}에 성공적으로 도착하여 모터를 안전 정지했습니다.`, 'success');
+    },
+
+    pause() {
+        if (!this.isNavigating || this.isPaused) return;
+        this.isPaused = true;
+        if (this.stepTimer) clearTimeout(this.stepTimer);
+        const elapsed = Date.now() - this.stepStartTime;
+        this.stepRemainingMs = Math.max(0, this.stepRemainingMs - elapsed);
+
+        BleController.sendPacket('CMD:STOP');
+
+        const hudInst = document.getElementById('realHudInstructionText');
+        const autoBadge = document.getElementById('realAutopilotModeBadge');
+        if (hudInst) hudInst.textContent = '⏸️ 일시 정지 상태입니다. [주행 재개] 버튼을 누르면 이어서 주행합니다.';
+        if (autoBadge) {
+            autoBadge.className = 'badge badge-yellow';
+            autoBadge.textContent = '일시 정지됨';
+        }
+        logEvent('[MAT-NAV]', '⏸️ [일시 정지] 로보독 모터 정지 (남은 시간 대기)', 'warn');
+    },
+
+    resume() {
+        if (!this.isNavigating || !this.isPaused) return;
+        this.isPaused = false;
+
+        const dest = this.destinations[this.activeDestKey];
+        if (!dest) return;
+
+        const step = dest.steps[this.activeStepIdx];
+        if (!step) return;
+
+        BleController.sendPacket(step.cmd);
+
+        const hudInst = document.getElementById('realHudInstructionText');
+        const autoBadge = document.getElementById('realAutopilotModeBadge');
+        if (hudInst) hudInst.textContent = `▶️ 주행 재개: ${step.desc}`;
+        if (autoBadge) {
+            autoBadge.className = 'badge badge-green';
+            autoBadge.textContent = '자율 주행 중';
+        }
+
+        logEvent('[MAT-NAV]', `▶️ [주행 재개] 단계 ${this.activeStepIdx + 1} 이어서 주행 (${this.stepRemainingMs}ms 남음)`, 'info');
+
+        this.stepStartTime = Date.now();
+        this.stepTimer = setTimeout(() => {
+            this.executeStep(this.activeDestKey, this.activeStepIdx + 1);
+        }, this.stepRemainingMs);
+    },
+
+    stop() {
+        if (this.stepTimer) clearTimeout(this.stepTimer);
+        this.isNavigating = false;
+        this.isPaused = false;
+        AppState.isWalking = false;
+
+        BleController.sendPacket('CMD:STOP');
+
+        const hudInst = document.getElementById('realHudInstructionText');
+        const autoBadge = document.getElementById('realAutopilotModeBadge');
+        if (hudInst) hudInst.textContent = '⏹️ 안내가 취소되었습니다. 새로운 목적지를 선택해 주세요.';
+        if (autoBadge) {
+            autoBadge.className = 'badge badge-gray';
+            autoBadge.textContent = '주행 대기';
+        }
+        logEvent('[MAT-NAV]', '⏹️ [주행 취소] 로보독 정지 및 경로 안내 취소', 'info');
+    }
+};
+
+// ---------------------------------------------------------
+// 11-3. [신규] 🐕 실제 로보독 자율주행 & 음성 관제 매니저 (RealRobotAutoPilot)
 // ---------------------------------------------------------
 const RealRobotAutoPilot = {
     voiceRecognition: null,
@@ -5775,69 +6124,62 @@ const RealRobotAutoPilot = {
         if (btnL) btnL.addEventListener('click', () => BleController.sendPacket('CMD:TURN_LEFT'));
         if (btnR) btnR.addEventListener('click', () => BleController.sendPacket('CMD:TURN_RIGHT'));
 
-        // 4. 빠른 목적지 칩 클릭
+        // 4. 해커톤 경기장 매트 주요 거점 핀 클릭
+        document.querySelectorAll('.mat-dest-pin').forEach(pin => {
+            pin.addEventListener('click', () => {
+                const dest = pin.getAttribute('data-dest');
+                if (dest) {
+                    const inputEl = document.getElementById('inputRealSearch');
+                    if (inputEl && dest !== 'START') inputEl.value = dest;
+                    HackathonMatNavigator.navigate(dest);
+                }
+            });
+        });
+
+        // 5. 빠른 목적지 칩 클릭
         document.querySelectorAll('.real-dest-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const dest = chip.getAttribute('data-dest');
                 if (dest) {
                     const inputEl = document.getElementById('inputRealSearch');
                     if (inputEl) inputEl.value = dest;
-                    startNavigation(dest, null);
+                    HackathonMatNavigator.navigate(dest);
                 }
             });
         });
 
-        // 5. 텍스트 검색 입력 및 탐색 버튼
+        // 6. 텍스트 검색 입력 및 탐색 버튼
         const inputSearch = document.getElementById('inputRealSearch');
         const btnSearch = document.getElementById('btnRealSearchRoute');
         if (btnSearch && inputSearch) {
-            btnSearch.addEventListener('click', () => {
+            const doSearch = () => {
                 const q = inputSearch.value.trim();
-                if (q) startNavigation(q, null);
-            });
+                if (q) HackathonMatNavigator.navigate(q);
+            };
+            btnSearch.addEventListener('click', doSearch);
             inputSearch.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    const q = inputSearch.value.trim();
-                    if (q) startNavigation(q, null);
-                }
+                if (e.key === 'Enter') doSearch();
             });
         }
 
-        // 6. 자율주행 HUD 제어 버튼
+        // 7. 자율주행 HUD 제어 버튼
         const btnPause = document.getElementById('btnRealNavPause');
         const btnResume = document.getElementById('btnRealNavResume');
         const btnStop = document.getElementById('btnRealNavStop');
 
         if (btnPause) {
             btnPause.addEventListener('click', () => {
-                AppState.isWalking = false;
-                BleController.sendPacket('CMD:STOP');
-                logEvent('[AUTOPILOT]', '⏸️ [사용자 일시정지] 로보독 정지 (S)', 'warn');
+                HackathonMatNavigator.pause();
             });
         }
         if (btnResume) {
             btnResume.addEventListener('click', () => {
-                AppState.isWalking = true;
-                BleController.sendPacket('CMD:FORWARD');
-                logEvent('[AUTOPILOT]', '▶️ [사용자 주행 재개] 로보독 전진 주행 (F)', 'success');
+                HackathonMatNavigator.resume();
             });
         }
         if (btnStop) {
             btnStop.addEventListener('click', () => {
-                AppState.isWalking = false;
-                BleController.sendPacket('CMD:STOP');
-                if (RealMapManager.trackingInterval) {
-                    clearInterval(RealMapManager.trackingInterval);
-                }
-                const hudText = document.getElementById('realHudInstructionText');
-                if (hudText) hudText.textContent = '안내가 종료되었습니다. 새로운 목적지를 선택해 주세요.';
-                const hudDest = document.getElementById('realHudDestName');
-                if (hudDest) hudDest.textContent = '미설정';
-                const hudDist = document.getElementById('realHudRemainDist');
-                if (hudDist) hudDist.textContent = '-';
-                const hudTime = document.getElementById('realHudRemainTime');
-                if (hudTime) hudTime.textContent = '-';
-                logEvent('[AUTOPILOT]', '⏹️ [안내 종료] 로보독 정지 및 경로 안내 취소', 'info');
+                HackathonMatNavigator.stop();
             });
         }
     },
@@ -5863,7 +6205,7 @@ const RealRobotAutoPilot = {
             this.isListening = true;
             micBtn.classList.add('recording');
             if (promptEl) promptEl.textContent = '말씀을 듣고 있습니다... (목적지를 말씀하세요)';
-            if (transcriptEl) transcriptEl.innerHTML = '<span style="color: #2563EB;">🎙️ 듣는 중... "세종대학교 가자"</span>';
+            if (transcriptEl) transcriptEl.innerHTML = '<span style="color: #2563EB;">🎙️ 듣는 중... "병원 가자", "지하철역 가자"</span>';
         };
 
         recognition.onresult = (e) => {
@@ -5925,11 +6267,10 @@ const RealRobotAutoPilot = {
 
         const transcriptEl = document.getElementById('realVoiceTranscript');
         if (transcriptEl) {
-            transcriptEl.innerHTML = `<strong>🗣️ [인식 완료]</strong> "${cleaned}" 탐색 시작...`;
+            transcriptEl.innerHTML = `<strong>🗣️ [인식 완료]</strong> "${cleaned}" 매트 좌표 탐색 시작...`;
         }
 
-        VoiceEngine.speak(`${cleaned}(으)로 안내를 시작합니다.`);
-        startNavigation(cleaned, null);
+        HackathonMatNavigator.navigate(cleaned);
     },
 
     updateNavHud(instruction, distText, timeText, signalText = null) {
