@@ -5728,108 +5728,108 @@ function switchOpMode(mode) {
 // 11-2. [신규] 🏆 해커톤 경기장 매트(AI 동행 프로젝트) 좌표 환산 자율주행 플래너
 // ---------------------------------------------------------
 const HackathonMatNavigator = {
-    // 경기장 매트 주요 거점 (실제 크기 mm 환산 및 뷰 박스 백분율 %)
+    // 경기장 매트 주요 거점 (실제 크기 1000mm x 750mm 기준)
     destinations: {
         'START': {
             name: '출발지 (START)',
-            xMm: 780,
-            yMm: 860,
-            pctX: 78,
+            xMm: 770,
+            yMm: 645,
+            pctX: 77,
             pctY: 86,
-            description: '대회장 매트 출발선'
+            description: '대회장 매트 출발선 (우측 하단 도로)'
         },
         '병원': {
             name: '병원 (Hospital)',
             xMm: 760,
-            yMm: 600,
+            yMm: 440,
             pctX: 76,
-            pctY: 60,
-            distMm: 260,
+            pctY: 59,
+            distMm: 210,
             timeSec: 3,
             voiceIntro: '병원으로 목적지 좌표를 환산했습니다. 로보독이 직진 주행을 시작합니다.',
             voiceArrival: '병원에 안전하게 도착했습니다. 안내를 완료합니다.',
             routePoints: [
-                { pctX: 78, pctY: 86 },
-                { pctX: 76, pctY: 60 }
+                { pctX: 77, pctY: 86 },
+                { pctX: 76, pctY: 59 }
             ],
             steps: [
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 병원 방면 직진 주행 중 (260mm)...', duration: 3200, pctX: 76, pctY: 60, mmX: 760, mmY: 600, signal: '안전 보도' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: '2단계: 🏥 병원 도착 완료! 모터 정지', duration: 0, pctX: 76, pctY: 60, mmX: 760, mmY: 600, signal: '도착 완료' }
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 병원 방면 직진 주행 중 (210mm)...', duration: 2800, pctX: 76, pctY: 59, mmX: 760, mmY: 440, signal: '안전 보도' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '2단계: 🏥 병원 도착 완료! 모터 정지', duration: 0, pctX: 76, pctY: 59, mmX: 760, mmY: 440, signal: '도착 완료' }
             ]
         },
         '지하철역': {
             name: '지하철역 (Metro)',
             xMm: 240,
-            yMm: 220,
+            yMm: 135,
             pctX: 24,
-            pctY: 22,
+            pctY: 18,
             distMm: 850,
             timeSec: 12,
             voiceIntro: '지하철역으로 이동합니다. 전방 횡단보도 신호를 감지하며 안전하게 주행합니다.',
             voiceArrival: '지하철역에 무사히 도착했습니다. 안내를 완료합니다.',
             routePoints: [
-                { pctX: 78, pctY: 86 },
+                { pctX: 77, pctY: 86 },
                 { pctX: 76, pctY: 52 },
                 { pctX: 52, pctY: 52 },
-                { pctX: 52, pctY: 22 },
-                { pctX: 24, pctY: 22 }
+                { pctX: 52, pctY: 18 },
+                { pctX: 24, pctY: 18 }
             ],
             steps: [
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 교차로 진입로 직진 주행 (150mm)', duration: 2200, pctX: 76, pctY: 52, mmX: 760, mmY: 520, signal: '안전 보도' },
-                { cmd: 'CMD:TURN_LEFT', pkt: 'L', desc: '2단계: 횡단보도 방향 좌회전 선회', duration: 1100, pctX: 72, pctY: 52, mmX: 720, mmY: 520, signal: '좌회전 선회' },
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 횡단보도 정지선 앞 접근 주행 (200mm)', duration: 2400, pctX: 52, pctY: 52, mmX: 520, mmY: 520, signal: '횡단보도 접근' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 🛑 횡단보도 적색 신호 감지! 정지선 대기', duration: 2800, pctX: 52, pctY: 52, mmX: 520, mmY: 520, signal: '🛑 적색 신호 (정지 대기)' },
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '5단계: 🟢 초록불 확인! 횡단보도 통과 및 지하철역 진입 (380mm)', duration: 3200, pctX: 24, pctY: 22, mmX: 240, mmY: 220, signal: '🟢 초록불 (안전 통과)' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: '6단계: 🚇 지하철역 도착 완료! 모터 정지', duration: 0, pctX: 24, pctY: 22, mmX: 240, mmY: 220, signal: '도착 완료' }
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 교차로 진입로 직진 주행 (150mm)', duration: 2200, pctX: 76, pctY: 52, mmX: 760, mmY: 390, signal: '안전 보도' },
+                { cmd: 'CMD:TURN_LEFT', pkt: 'L', desc: '2단계: 횡단보도 방향 좌회전 선회', duration: 1100, pctX: 72, pctY: 52, mmX: 720, mmY: 390, signal: '좌회전 선회' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 횡단보도 정지선 앞 접근 주행 (200mm)', duration: 2400, pctX: 52, pctY: 52, mmX: 520, mmY: 390, signal: '횡단보도 접근' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 🛑 횡단보도 적색 신호 감지! 정지선 대기', duration: 2800, pctX: 52, pctY: 52, mmX: 520, mmY: 390, signal: '🛑 적색 신호 (정지 대기)' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '5단계: 🟢 초록불 확인! 횡단보도 통과 및 지하철역 진입 (380mm)', duration: 3200, pctX: 24, pctY: 18, mmX: 240, mmY: 135, signal: '🟢 초록불 (안전 통과)' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '6단계: 🚇 지하철역 도착 완료! 모터 정지', duration: 0, pctX: 24, pctY: 18, mmX: 240, mmY: 135, signal: '도착 완료' }
             ]
         },
         '물류센터': {
             name: '물류센터 (Logistics)',
-            xMm: 230,
-            yMm: 740,
-            pctX: 23,
-            pctY: 74,
+            xMm: 240,
+            yMm: 570,
+            pctX: 24,
+            pctY: 76,
             distMm: 620,
             timeSec: 8,
             voiceIntro: '물류센터로 좌표를 환산했습니다. 운송로를 따라 물류센터로 이동합니다.',
             voiceArrival: '물류센터 하역장에 안전하게 도착했습니다.',
             routePoints: [
-                { pctX: 78, pctY: 86 },
-                { pctX: 78, pctY: 74 },
-                { pctX: 23, pctY: 74 }
+                { pctX: 77, pctY: 86 },
+                { pctX: 77, pctY: 76 },
+                { pctX: 24, pctY: 76 }
             ],
             steps: [
-                { cmd: 'CMD:TURN_LEFT', pkt: 'L', desc: '1단계: 물류 전용 운송로 방향 좌회전', duration: 1100, pctX: 78, pctY: 74, mmX: 780, mmY: 740, signal: '방향 정렬' },
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '2단계: 물류센터 직통 도로 주행 (550mm)', duration: 4200, pctX: 35, pctY: 74, mmX: 350, mmY: 740, signal: '운송 주행' },
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 물류센터 하역장 입구 서행 진입 (70mm)', duration: 1200, pctX: 23, pctY: 74, mmX: 230, mmY: 740, signal: '하역장 진입' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 📦 물류센터 도착 완료! 모터 정지', duration: 0, pctX: 23, pctY: 74, mmX: 230, mmY: 740, signal: '도착 완료' }
+                { cmd: 'CMD:TURN_LEFT', pkt: 'L', desc: '1단계: 물류 전용 운송로 방향 좌회전', duration: 1100, pctX: 77, pctY: 76, mmX: 770, mmY: 570, signal: '방향 정렬' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '2단계: 물류센터 직통 도로 주행 (530mm)', duration: 4200, pctX: 35, pctY: 76, mmX: 350, mmY: 570, signal: '운송 주행' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 물류센터 하역장 입구 서행 진입 (110mm)', duration: 1200, pctX: 24, pctY: 76, mmX: 240, mmY: 570, signal: '하역장 진입' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 📦 물류센터 도착 완료! 모터 정지', duration: 0, pctX: 24, pctY: 76, mmX: 240, mmY: 570, signal: '도착 완료' }
             ]
         },
         '스마트아파트': {
             name: '스마트단지 / 우리집',
-            xMm: 750,
-            yMm: 200,
-            pctX: 75,
-            pctY: 20,
-            distMm: 660,
+            xMm: 760,
+            yMm: 135,
+            pctX: 76,
+            pctY: 18,
+            distMm: 550,
             timeSec: 8,
             voiceIntro: '우리집 스마트아파트 단지로 길안내를 시작합니다.',
             voiceArrival: '스마트단지 우리집에 안전하게 도착했습니다. 편안한 시간 되세요!',
             routePoints: [
-                { pctX: 78, pctY: 86 },
+                { pctX: 77, pctY: 86 },
                 { pctX: 76, pctY: 52 },
-                { pctX: 75, pctY: 20 }
+                { pctX: 76, pctY: 18 }
             ],
             steps: [
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 중앙 도로를 따라 직진 주행 (340mm)', duration: 3200, pctX: 76, pctY: 52, mmX: 760, mmY: 520, signal: '중앙 도로' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: '2단계: 단지 출입구 보안 확인 및 일시 대기', duration: 1500, pctX: 76, pctY: 52, mmX: 760, mmY: 520, signal: '출입 확인' },
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 아파트 동 입구로 진입 (320mm)', duration: 3000, pctX: 75, pctY: 20, mmX: 750, mmY: 200, signal: '단지 내부' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 🏡 우리집 도착 완료! 모터 정지', duration: 0, pctX: 75, pctY: 20, mmX: 750, mmY: 200, signal: '도착 완료' }
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '1단계: 중앙 도로를 따라 직진 주행 (300mm)', duration: 3200, pctX: 76, pctY: 52, mmX: 760, mmY: 390, signal: '중앙 도로' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '2단계: 단지 출입구 보안 확인 및 일시 대기', duration: 1500, pctX: 76, pctY: 52, mmX: 760, mmY: 390, signal: '출입 확인' },
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: '3단계: 아파트 동 입구로 진입 (255mm)', duration: 2800, pctX: 76, pctY: 18, mmX: 760, mmY: 135, signal: '단지 내부' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: '4단계: 🏡 우리집 도착 완료! 모터 정지', duration: 0, pctX: 76, pctY: 18, mmX: 760, mmY: 135, signal: '도착 완료' }
             ]
         }
     },
 
-    currentPos: { mmX: 780, mmY: 860, pctX: 78, pctY: 86 },
+    currentPos: { mmX: 770, mmY: 645, pctX: 77, pctY: 86 },
     activeDestKey: null,
     activeStepIdx: 0,
     stepTimer: null,
@@ -5851,22 +5851,96 @@ const HackathonMatNavigator = {
 
     resetToStart() {
         this.stop();
-        this.currentPos = { mmX: 780, mmY: 860, pctX: 78, pctY: 86 };
-        this.updateRobotMarker(78, 86);
+        this.currentPos = { mmX: 770, mmY: 645, pctX: 77, pctY: 86 };
+        this.updateRobotMarker(77, 86);
         this.clearRouteLine();
 
         const coordCur = document.getElementById('coordCurrentPos');
         const coordTgt = document.getElementById('coordTargetPos');
         const coordStep = document.getElementById('coordMotionStep');
         const coordPkt = document.getElementById('coordMotorPkt');
-        if (coordCur) coordCur.textContent = 'X: 780mm, Y: 860mm (START)';
+        if (coordCur) coordCur.textContent = 'X: 770mm, Y: 645mm (START)';
         if (coordTgt) coordTgt.textContent = '출발 준비 완료';
         if (coordStep) coordStep.textContent = '출발선 대기 중';
         if (coordPkt) coordPkt.textContent = '[TX] 정지 (S)';
 
+        const inputX = document.getElementById('inputCustomCoordX');
+        const inputY = document.getElementById('inputCustomCoordY');
+        if (inputX) inputX.value = 770;
+        if (inputY) inputY.value = 645;
+
         BleController.sendPacket('CMD:STOP');
         VoiceEngine.speak('로보독 위치가 출발선으로 초기화되었습니다.');
-        logEvent('[MAT-NAV]', '🚩 로보독 출발선(START: 780mm, 860mm) 초기화 완료', 'info');
+        logEvent('[MAT-NAV]', '🚩 로보독 출발선(START: 770mm, 645mm) 초기화 완료', 'info');
+    },
+
+    navigateByCoordinates(targetXMm, targetYMm, label = '지정 좌표') {
+        const x = Math.max(0, Math.min(1000, Number(targetXMm) || 0));
+        const y = Math.max(0, Math.min(750, Number(targetYMm) || 0));
+        const pctX = Math.max(0, Math.min(100, Math.round((x / 1000) * 100)));
+        const pctY = Math.max(0, Math.min(100, Math.round((y / 750) * 100)));
+
+        this.stop();
+        this.activeDestKey = 'CUSTOM';
+        this.isNavigating = true;
+        this.isPaused = false;
+        AppState.isWalking = true;
+        AppState.currentDest = `${label} (${x}, ${y})`;
+
+        const deltaX = x - this.currentPos.mmX;
+        const deltaY = y - this.currentPos.mmY;
+        const distMm = Math.round(Math.hypot(deltaX, deltaY));
+        const durationMs = Math.max(1500, Math.min(6000, Math.round(distMm * 8)));
+
+        // 동적 경로 계획 생성
+        const customDest = {
+            name: `${label} (X: ${x}mm, Y: ${y}mm)`,
+            xMm: x,
+            yMm: y,
+            pctX: pctX,
+            pctY: pctY,
+            distMm: distMm,
+            timeSec: Math.round(durationMs / 1000),
+            voiceIntro: `목표 좌표 X ${x} 밀리미터, Y ${y} 밀리미터로 환산 완료했습니다. 로보독이 자율 주행을 시작합니다.`,
+            voiceArrival: `지정하신 목표 좌표에 안전하게 도착했습니다. 안내를 완료합니다.`,
+            routePoints: [
+                { pctX: this.currentPos.pctX, pctY: this.currentPos.pctY },
+                { pctX: pctX, pctY: pctY }
+            ],
+            steps: [
+                { cmd: 'CMD:FORWARD', pkt: 'F', desc: `목표 좌표 (X: ${x}, Y: ${y}) 방면 주행 (${distMm}mm)`, duration: durationMs, pctX: pctX, pctY: pctY, mmX: x, mmY: y, signal: '자율 주행' },
+                { cmd: 'CMD:STOP', pkt: 'S', desc: `📍 목표 좌표 도착 완료! 모터 정지`, duration: 0, pctX: pctX, pctY: pctY, mmX: x, mmY: y, signal: '도착 완료' }
+            ]
+        };
+
+        this.destinations['CUSTOM'] = customDest;
+
+        logEvent('[MAT-NAV]', `🎯 [좌표 직접 환산] -> (${x}mm, ${y}mm), 직선거리: ${distMm}mm`, 'success');
+
+        this.drawRouteLine(customDest.routePoints);
+
+        const coordTgt = document.getElementById('coordTargetPos');
+        if (coordTgt) coordTgt.textContent = `X: ${x}mm, Y: ${y}mm (${label})`;
+
+        const hudDest = document.getElementById('realHudDestName');
+        const hudDist = document.getElementById('realHudRemainDist');
+        const hudTime = document.getElementById('realHudRemainTime');
+        const hudSignal = document.getElementById('realHudSignalText');
+        const hudInst = document.getElementById('realHudInstructionText');
+        const autoBadge = document.getElementById('realAutopilotModeBadge');
+
+        if (hudDest) hudDest.textContent = `${label} (${x}, ${y})`;
+        if (hudDist) hudDist.textContent = `${distMm} mm`;
+        if (hudTime) hudTime.textContent = `약 ${Math.round(durationMs / 1000)}초`;
+        if (hudSignal) hudSignal.textContent = '좌표 추적 중';
+        if (hudInst) hudInst.textContent = customDest.voiceIntro;
+        if (autoBadge) {
+            autoBadge.className = 'badge badge-green';
+            autoBadge.textContent = '좌표 자율 주행 중';
+        }
+
+        VoiceEngine.speak(customDest.voiceIntro);
+        this.executeStep('CUSTOM', 0);
     },
 
     navigate(query) {
@@ -6180,6 +6254,50 @@ const RealRobotAutoPilot = {
         if (btnStop) {
             btnStop.addEventListener('click', () => {
                 HackathonMatNavigator.stop();
+            });
+        }
+
+        // 8. [신규] 좌표 직접 입력 및 출발선 리셋 버튼
+        const btnApplyCoord = document.getElementById('btnApplyCustomCoord');
+        const btnResetStart = document.getElementById('btnResetStartCoord');
+        const inputCoordX = document.getElementById('inputCustomCoordX');
+        const inputCoordY = document.getElementById('inputCustomCoordY');
+
+        if (btnApplyCoord) {
+            btnApplyCoord.addEventListener('click', () => {
+                const x = parseInt(inputCoordX ? inputCoordX.value : '760', 10);
+                const y = parseInt(inputCoordY ? inputCoordY.value : '440', 10);
+                HackathonMatNavigator.navigateByCoordinates(x, y, '직접 입력 좌표');
+            });
+        }
+
+        if (btnResetStart) {
+            btnResetStart.addEventListener('click', () => {
+                HackathonMatNavigator.resetToStart();
+            });
+        }
+
+        // 9. [신규] 경기장 매트 이미지 직접 클릭 시 해당 좌표로 즉시 자율주행
+        const matViewBox = document.getElementById('matViewBox');
+        if (matViewBox) {
+            matViewBox.addEventListener('click', (e) => {
+                // 핀 또는 로봇 마커 클릭 시 중복 처리 방지
+                if (e.target.closest('.mat-dest-pin') || e.target.closest('.mat-robot-marker')) return;
+
+                const rect = matViewBox.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                const pctX = Math.max(0, Math.min(100, Math.round((clickX / rect.width) * 100)));
+                const pctY = Math.max(0, Math.min(100, Math.round((clickY / rect.height) * 100)));
+
+                const xMm = Math.round(pctX * 10);
+                const yMm = Math.round(pctY * 7.5);
+
+                if (inputCoordX) inputCoordX.value = xMm;
+                if (inputCoordY) inputCoordY.value = yMm;
+
+                HackathonMatNavigator.navigateByCoordinates(xMm, yMm, `클릭 좌표 (${xMm}, ${yMm})`);
             });
         }
     },

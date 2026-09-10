@@ -2398,31 +2398,31 @@
                 </svg>
 
                 <!-- 매트 위 주요 거점 핀 -->
-                <div class="mat-dest-pin" style="left: 78%; top: 86%;" data-dest="START" title="출발지">
+                <div class="mat-dest-pin" style="left: 77%; top: 86%;" data-dest="START" title="출발지 (START)">
                     <div class="pin-bubble" style="background: #059669; border-color: #34D399;">
                         <span class="pin-icon">🚩</span>
                         <span>출발 (START)</span>
                     </div>
                 </div>
-                <div class="mat-dest-pin" style="left: 76%; top: 60%;" data-dest="병원" title="병원으로 가기">
+                <div class="mat-dest-pin" style="left: 76%; top: 59%;" data-dest="병원" title="병원으로 가기">
                     <div class="pin-bubble">
                         <span class="pin-icon">🏥</span>
                         <span>병원</span>
                     </div>
                 </div>
-                <div class="mat-dest-pin" style="left: 24%; top: 22%;" data-dest="지하철역" title="지하철역으로 가기">
+                <div class="mat-dest-pin" style="left: 24%; top: 18%;" data-dest="지하철역" title="지하철역으로 가기">
                     <div class="pin-bubble">
                         <span class="pin-icon">🚇</span>
                         <span>지하철역</span>
                     </div>
                 </div>
-                <div class="mat-dest-pin" style="left: 23%; top: 74%;" data-dest="물류센터" title="물류센터로 가기">
+                <div class="mat-dest-pin" style="left: 24%; top: 76%;" data-dest="물류센터" title="물류센터로 가기">
                     <div class="pin-bubble">
                         <span class="pin-icon">📦</span>
                         <span>물류센터</span>
                     </div>
                 </div>
-                <div class="mat-dest-pin" style="left: 75%; top: 20%;" data-dest="스마트아파트" title="스마트단지/우리집으로 가기">
+                <div class="mat-dest-pin" style="left: 76%; top: 18%;" data-dest="스마트아파트" title="스마트단지/우리집으로 가기">
                     <div class="pin-bubble">
                         <span class="pin-icon">🏡</span>
                         <span>우리집/단지</span>
@@ -2430,7 +2430,7 @@
                 </div>
 
                 <!-- 실시간 로보독 마커 -->
-                <div id="matRobotMarker" class="mat-robot-marker" style="left: 78%; top: 86%;">
+                <div id="matRobotMarker" class="mat-robot-marker" style="left: 77%; top: 86%;">
                     <span>🐕</span>
                 </div>
             </div>
@@ -2439,7 +2439,7 @@
             <div class="mat-coord-panel">
                 <div class="coord-item">
                     <span class="coord-label">현재 로보독 좌표 (X, Y)</span>
-                    <span id="coordCurrentPos" class="coord-value">X: 780mm, Y: 860mm</span>
+                    <span id="coordCurrentPos" class="coord-value">X: 770mm, Y: 645mm</span>
                 </div>
                 <div class="coord-item">
                     <span class="coord-label">목표 거점 환산 좌표 (X, Y)</span>
@@ -2452,6 +2452,32 @@
                 <div class="coord-item">
                     <span class="coord-label">로보독 무선 모터 명령</span>
                     <span id="coordMotorPkt" class="coord-value">[TX] 정지 (S)</span>
+                </div>
+            </div>
+
+            <!-- [신규] 🎯 수동 좌표 직접 입력 및 클릭 설정 안내 바 -->
+            <div class="mat-manual-coord-box" style="margin-top: 14px; padding: 14px 16px; background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 800; font-size: 13px; color: #1E293B; display: flex; align-items: center; gap: 4px;">
+                        <span>📍</span><span>목표 좌표 직접 입력:</span>
+                    </span>
+                    <label style="font-size: 12px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 4px;">
+                        X (mm):
+                        <input type="number" id="inputCustomCoordX" min="0" max="1000" step="10" value="760" style="width: 76px; height: 32px; padding: 2px 8px; border: 1.5px solid #CBD5E1; border-radius: 6px; font-size: 13px; font-weight: 700; text-align: center;">
+                    </label>
+                    <label style="font-size: 12px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 4px;">
+                        Y (mm):
+                        <input type="number" id="inputCustomCoordY" min="0" max="750" step="10" value="440" style="width: 76px; height: 32px; padding: 2px 8px; border: 1.5px solid #CBD5E1; border-radius: 6px; font-size: 13px; font-weight: 700; text-align: center;">
+                    </label>
+                    <button id="btnApplyCustomCoord" type="button" style="background: #2563EB; color: #FFF; border: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
+                        <span>🚀</span><span>이 좌표로 이동</span>
+                    </button>
+                    <button id="btnResetStartCoord" type="button" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <span>🚩</span><span>출발선 리셋</span>
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px;">
+                    <span>💡</span><span>매트 사진의 원하는 지점을 마우스로 직접 클릭해도 좌표가 즉시 설정됩니다!</span>
                 </div>
             </div>
         </div>
