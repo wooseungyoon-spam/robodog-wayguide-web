@@ -1450,6 +1450,7 @@ const VoiceEngine = {
     modalEl: null,
     transcriptEl: null,
     badgeEl: null,
+    lastHeardText: '',
 
     // 실시간 실제 마이크 볼륨 측정 & 오디오 비주얼라이저
     audioContext: null,
@@ -1463,33 +1464,40 @@ const VoiceEngine = {
         this.transcriptEl = document.getElementById('voiceModalTranscript');
         this.badgeEl = document.getElementById('voiceListeningBadge');
 
-        // 1. 중앙 대형 마이크 펄스 원형 버튼 클릭 이벤트 (언제든 탭하여 즉시 음성인식 재시작)
+        // 1. [신규] 원터치 음성인식 시작 / 중지(완료) 제어 버튼
+        const btnToggleRecord = document.getElementById('btnVoiceToggleRecord');
+        if (btnToggleRecord) {
+            btnToggleRecord.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleRecord();
+            });
+        }
+
+        // 중앙 대형 마이크 펄스 원형 버튼 클릭 이벤트 (터치 시 시작 / 중지 토글)
         const micPulseBtn = document.getElementById('micPulseCircle');
         if (micPulseBtn) {
             micPulseBtn.style.cursor = 'pointer';
-            micPulseBtn.title = '터치하여 음성 인식 시작';
-            micPulseBtn.addEventListener('click', () => {
-                if (navigator.vibrate) navigator.vibrate(60);
-                if (this.transcriptEl) {
-                    this.transcriptEl.innerHTML = '<span style="color:#2563EB; font-weight:800;">🎙️ 다시 듣고 있습니다...</span> 편하게 말씀하세요.';
-                }
-                this.restartSTT();
+            micPulseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleRecord();
             });
         }
 
-        // 2. 노인 모드 대형 마이크 버튼 바인딩
+        // 2. 노인 모드 대형 마이크 버튼 바인딩 (열기/닫기 토글)
         const micSenior = document.getElementById('btnVoiceListen');
         if (micSenior) {
-            micSenior.addEventListener('click', () => {
-                this.openVoiceModal();
+            micSenior.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleVoiceModal();
             });
         }
 
-        // 3. 일반 모드 검색창 내부 마이크 버튼 바인딩
+        // 3. 일반 모드 검색창 내부 마이크 버튼 바인딩 (열기/닫기 토글)
         const micGeneral = document.getElementById('btnGeneralVoiceListen');
         if (micGeneral) {
-            micGeneral.addEventListener('click', () => {
-                this.openVoiceModal();
+            micGeneral.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleVoiceModal();
             });
         }
 
@@ -1637,17 +1645,13 @@ const VoiceEngine = {
 
         this.isModalOpen = true;
         this.isProcessing = false;
+        this.lastHeardText = '';
 
         if (this.transcriptEl) {
             this.transcriptEl.innerHTML = '<span style="color:#2563EB; font-weight:800;">🎙️ 실시간 마이크 수신 중...</span> 말씀해 주세요 (예: "병원 가자", "약국", "우리집", "멈춰")';
         }
-        if (this.badgeEl) {
-            this.badgeEl.textContent = '🎙️ 음성 듣는 중...';
-            this.badgeEl.className = 'voice-badge pulse';
-        }
 
-        const micSenior = document.getElementById('btnVoiceListen');
-        if (micSenior) micSenior.classList.add('listening');
+        this.updateListeningUi(true);
 
         // 1. 실제 마이크 스트림 연결 & 파형 비주얼라이저 가동
         this.startMicVisualizer();
@@ -1663,9 +1667,128 @@ const VoiceEngine = {
         
         this.stopSTT();
         this.stopMicVisualizer();
+        this.updateListeningUi(false);
+    },
 
+    toggleVoiceModal() {
+        if (this.isModalOpen) {
+            this.closeVoiceModal();
+        } else {
+            this.openVoiceModal();
+        }
+    },
+
+    toggleRecord() {
+        if (navigator.vibrate) navigator.vibrate(50);
+        if (this.isListening) {
+            this.finishOrStopListening();
+        } else {
+            this.resumeListening();
+        }
+    },
+
+    resumeListening() {
+        this.lastHeardText = '';
+        this.isListening = true;
+        this.isProcessing = false;
+        if (this.transcriptEl) {
+            this.transcriptEl.innerHTML = '<span style="color:#2563EB; font-weight:800;">🎙️ 다시 듣고 있습니다...</span> 편하게 말씀하세요.';
+        }
+        this.startMicVisualizer();
+        this.startSTT();
+        this.updateListeningUi(true);
+    },
+
+    finishOrStopListening() {
+        const textToProcess = (this.lastHeardText || '').trim();
+        this.stopSTT();
+        this.stopMicVisualizer();
+        this.updateListeningUi(false);
+
+        if (textToProcess) {
+            logEvent('[VOICE]', `사용자 수동 중지 - 즉시 명령 처리: "${textToProcess}"`, 'success');
+            if (this.transcriptEl) {
+                this.transcriptEl.innerHTML = `
+                    <div style="color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 4px;">✅ 인식 완료 (처리 중):</div>
+                    <div style="color: #0F172A; font-size: 21px; font-weight: 900;">"${textToProcess}"</div>
+                `;
+            }
+            if (this.badgeEl) {
+                this.badgeEl.textContent = '✅ 인식 완료! 목적지 분석 중...';
+                this.badgeEl.className = 'voice-badge';
+            }
+            this.handleVoiceCommand(textToProcess);
+            this.lastHeardText = '';
+        } else {
+            if (this.transcriptEl) {
+                this.transcriptEl.innerHTML = '<span style="color:#64748B;">음성 인식이 일시 중지되었습니다. 다시 말씀하시려면 [다시 말씀하기]를 누르세요.</span>';
+            }
+            if (this.badgeEl) {
+                this.badgeEl.textContent = '⏹️ 일시 중지됨 (터치 시 시작)';
+                this.badgeEl.className = 'voice-badge';
+            }
+        }
+    },
+
+    updateListeningUi(isListening) {
+        const toggleBtn = document.getElementById('btnVoiceToggleRecord');
+        const toggleIcon = document.getElementById('btnVoiceToggleIcon');
+        const toggleText = document.getElementById('btnVoiceToggleText');
+        const pulseCircle = document.getElementById('micPulseCircle');
         const micSenior = document.getElementById('btnVoiceListen');
-        if (micSenior) micSenior.classList.remove('listening');
+        const micGeneral = document.getElementById('btnGeneralVoiceListen');
+
+        if (isListening) {
+            if (toggleBtn) {
+                toggleBtn.style.background = 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
+                toggleBtn.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)';
+            }
+            if (toggleIcon) toggleIcon.textContent = '⏹️';
+            if (toggleText) toggleText.textContent = '말씀 끝내기 (인식 완료)';
+            if (pulseCircle) {
+                pulseCircle.title = '터치하여 말씀 끝내기 (인식 완료)';
+                const icon = pulseCircle.querySelector('.pulse-icon');
+                if (icon) icon.textContent = '🎙️';
+            }
+            if (this.badgeEl) {
+                this.badgeEl.textContent = '🎙️ 말씀하시는 중... (터치 시 완료)';
+                this.badgeEl.className = 'voice-badge pulse';
+            }
+            if (micSenior) {
+                micSenior.classList.add('listening');
+                const label = micSenior.querySelector('.mic-label');
+                if (label) label.textContent = '인식 중지';
+            }
+            if (micGeneral) {
+                micGeneral.textContent = '⏹️';
+                micGeneral.title = '음성인식 중지';
+            }
+        } else {
+            if (toggleBtn) {
+                toggleBtn.style.background = 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)';
+                toggleBtn.style.boxShadow = '0 4px 15px rgba(37, 99, 235, 0.4)';
+            }
+            if (toggleIcon) toggleIcon.textContent = '🎙️';
+            if (toggleText) toggleText.textContent = '다시 말씀하기 (인식 시작)';
+            if (pulseCircle) {
+                pulseCircle.title = '터치하여 다시 말씀하기 (인식 시작)';
+                const icon = pulseCircle.querySelector('.pulse-icon');
+                if (icon) icon.textContent = '▶️';
+            }
+            if (this.badgeEl) {
+                this.badgeEl.textContent = '⏹️ 음성 대기 중 (버튼을 눌러 시작)';
+                this.badgeEl.className = 'voice-badge';
+            }
+            if (micSenior) {
+                micSenior.classList.remove('listening');
+                const label = micSenior.querySelector('.mic-label');
+                if (label) label.textContent = '말씀하기';
+            }
+            if (micGeneral) {
+                micGeneral.textContent = '🎤';
+                micGeneral.title = '음성으로 목적지 말씀하기';
+            }
+        }
     },
 
     /**
@@ -1785,6 +1908,9 @@ const VoiceEngine = {
             }
 
             const currentText = (finalTranscript || interimTranscript).trim();
+            if (currentText) {
+                this.lastHeardText = currentText;
+            }
 
             // 사용자가 말하는 단어가 실시간으로 텍스트 박스에 타이핑되듯 표시됨!
             if (currentText && this.transcriptEl) {
@@ -1798,11 +1924,7 @@ const VoiceEngine = {
             if (finalTranscript) {
                 const cleanFinal = finalTranscript.trim();
                 logEvent('[VOICE]', `음성 인식(STT) 최종 완료: "${cleanFinal}"`, 'success');
-                if (this.badgeEl) {
-                    this.badgeEl.textContent = '✅ 인식 완료! 목적지 분석 중...';
-                    this.badgeEl.className = 'voice-badge';
-                }
-                this.handleVoiceCommand(cleanFinal);
+                this.finishOrStopListening();
             }
         };
 
@@ -1817,20 +1939,22 @@ const VoiceEngine = {
                     this.badgeEl.className = 'voice-badge';
                 }
             } else if (event.error === 'no-speech') {
-                // 침묵으로 인한 no-speech 발생 시에도 모달이 열려있으면 자동 대기 유지
-                if (this.isModalOpen && !this.isProcessing) {
+                // 침묵으로 인한 no-speech 발생 시에도 사용자가 멈추지 않았다면 자동 대기 유지
+                if (this.isModalOpen && this.isListening && !this.isProcessing) {
                     // 끊김 없이 지속 청취 유지
                 }
             }
         };
 
         this.recognition.onend = () => {
-            this.isListening = false;
-            // 모달이 열려있고 명령 처리 중이 아니라면 언제나 자동 재연결 유지
-            if (this.isModalOpen && !this.isProcessing) {
+            // 사용자가 수동으로 중지한 경우(this.isListening === false)에는 재시작하지 않음!
+            if (this.isModalOpen && this.isListening && !this.isProcessing) {
                 try {
                     this.recognition.start();
                 } catch (e) {}
+            } else {
+                this.isListening = false;
+                this.updateListeningUi(false);
             }
         };
     },
@@ -5600,14 +5724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. 음성 마이크 버튼 바인딩
-    const micBtn = document.getElementById('btnVoiceListen');
-    if (micBtn) {
-        micBtn.addEventListener('click', () => {
-            VoiceEngine.speak('네, 어디로 갈까요? 편안하게 말씀해 주세요.', true);
-            setTimeout(() => VoiceEngine.startSTT(), 1600);
-        });
-    }
+    // 4. 음성 마이크 버튼 바인딩은 VoiceEngine.init()에서 토글 모드로 단일 관리됩니다.
 
     // 5. 어르신 모드 초대형 목적지 카드 (병원, 약국, 우리집, 복지관, 산책로, 마트, 지하철, 주민센터, SOS, 더보기)
     document.querySelectorAll('.senior-destination-grid .dest-card').forEach(card => {

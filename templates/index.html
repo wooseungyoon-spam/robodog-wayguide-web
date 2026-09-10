@@ -3096,6 +3096,14 @@
                 </div>
             </div>
 
+            <!-- [신규] 원터치 음성인식 시작 / 중지(완료) 동시 제어 버튼 -->
+            <div class="voice-control-actions" style="display: flex; justify-content: center; margin: 12px 0 16px;">
+                <button id="btnVoiceToggleRecord" class="btn-voice-toggle-record" style="width: 100%; max-width: 320px; padding: 14px 20px; font-size: 16px; font-weight: 900; border-radius: 14px; border: 2px solid #FFF; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: #FFF; transition: all 0.2s ease;">
+                    <span id="btnVoiceToggleIcon" style="font-size: 18px;">⏹️</span>
+                    <span id="btnVoiceToggleText">말씀 끝내기 (인식 완료)</span>
+                </button>
+            </div>
+
             <!-- 실시간 음성 수신 텍스트 박스 -->
             <div class="voice-transcript-box">
                 <div class="transcript-label">말씀하신 내용:</div>
@@ -3692,7 +3700,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=41.0_crlf_multi_dispatch"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=42.0_voice_toggle_record"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
