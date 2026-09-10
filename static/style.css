@@ -4379,3 +4379,532 @@ body, body.theme-white, body.mode-general {
     border-color: #2563EB !important;
     background: #FFFFFF !important;
 }
+
+/* =========================================================
+   [신규] 실행 모드 탭 바 (가상 모드 vs 실제 모드)
+   ========================================================= */
+.op-mode-tab-bar {
+    background: #0F172A;
+    border-bottom: 2px solid #1E293B;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: center;
+    position: sticky;
+    top: 60px;
+    z-index: 990;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.op-mode-tab-inner {
+    display: flex;
+    gap: 12px;
+    max-width: 960px;
+    width: 100%;
+}
+
+.op-mode-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    border: 2px solid #334155;
+    background: #1E293B;
+    color: #94A3B8;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.op-mode-tab:hover {
+    background: #27354E;
+    border-color: #475569;
+    color: #F8FAFC;
+    transform: translateY(-1px);
+}
+
+.op-mode-tab.active {
+    background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+    border-color: #6366F1;
+    color: #FFFFFF;
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+}
+
+#tabOpRealRobot.active {
+    background: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+    border-color: #10B981;
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.45);
+}
+
+.tab-emoji { font-size: 20px; }
+.tab-text { font-weight: 900; letter-spacing: -0.01em; }
+
+.tab-pill {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.tab-pill.pill-live {
+    background: #059669;
+    color: #FFFFFF;
+}
+
+.tab-pill.pill-sim {
+    background: #475569;
+    color: #E2E8F0;
+}
+
+/* 실제 모드 전용 레이아웃 */
+.real-robot-view {
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.real-robot-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 900px) {
+    .real-robot-grid-2col {
+        grid-template-columns: 1fr;
+    }
+}
+
+.real-robot-card {
+    background: #FFFFFF;
+    border-radius: 18px;
+    border: 1px solid #E2E8F0;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+body.theme-dark .real-robot-card {
+    background: #1E293B;
+    border-color: #334155;
+    color: #F8FAFC;
+}
+
+.real-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+body.theme-dark .real-card-header {
+    border-bottom-color: #334155;
+}
+
+.real-card-title {
+    font-size: 17px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0F172A;
+}
+
+body.theme-dark .real-card-title {
+    color: #F8FAFC;
+}
+
+/* 하드웨어 연결 상태 행 */
+.real-hw-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.real-hw-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #F1F5F9;
+    color: #64748B;
+    border: 1px solid #CBD5E1;
+}
+
+body.theme-dark .real-hw-badge {
+    background: #0F172A;
+    color: #94A3B8;
+    border-color: #334155;
+}
+
+.real-hw-badge.connected {
+    background: #ECFDF5;
+    color: #047857;
+    border-color: #10B981;
+}
+
+.real-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.btn-real-hw {
+    flex: 1;
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid #CBD5E1;
+    background: #F8FAFC;
+    color: #0F172A;
+    transition: all 0.2s ease;
+}
+
+.btn-real-hw:hover {
+    background: #E2E8F0;
+    transform: translateY(-1px);
+}
+
+.btn-real-hw.primary {
+    background: #2563EB;
+    color: #FFFFFF;
+    border-color: #1D4ED8;
+}
+
+.btn-real-hw.primary:hover {
+    background: #1D4ED8;
+}
+
+/* 수동 모터 테스트 패드 */
+.real-motor-test-pad {
+    background: #F8FAFC;
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid #E2E8F0;
+}
+
+body.theme-dark .real-motor-test-pad {
+    background: #0F172A;
+    border-color: #334155;
+}
+
+.motor-pad-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748B;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.motor-btn-cluster {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.btn-motor-cmd {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 6px;
+    border-radius: 10px;
+    border: 1px solid #CBD5E1;
+    background: #FFFFFF;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+body.theme-dark .btn-motor-cmd {
+    background: #1E293B;
+    border-color: #475569;
+    color: #F8FAFC;
+}
+
+.btn-motor-cmd:hover {
+    transform: translateY(-2px);
+}
+
+.btn-motor-cmd.btn-f:hover { background: #ECFDF5; border-color: #10B981; color: #047857; }
+.btn-motor-cmd.btn-s:hover { background: #FEF2F2; border-color: #EF4444; color: #B91C1C; }
+.btn-motor-cmd.btn-l:hover, .btn-motor-cmd.btn-r:hover { background: #EFF6FF; border-color: #3B82F6; color: #1D4ED8; }
+
+/* 음성 검색 카드 */
+.real-voice-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 10px 0 16px 0;
+}
+
+.real-mic-btn {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    color: #FFFFFF;
+    font-size: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 12px;
+}
+
+.real-mic-btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45);
+}
+
+.real-mic-btn.recording {
+    background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0.2), 0 8px 24px rgba(220, 38, 38, 0.4);
+    animation: mic-pulse 1.2s infinite;
+}
+
+@keyframes mic-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+    70% { transform: scale(1.08); box-shadow: 0 0 0 16px rgba(220, 38, 38, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+.real-voice-prompt {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 4px;
+}
+
+body.theme-dark .real-voice-prompt { color: #F8FAFC; }
+
+.real-voice-sub {
+    font-size: 13px;
+    color: #64748B;
+    margin-bottom: 12px;
+}
+
+body.theme-dark .real-voice-sub { color: #94A3B8; }
+
+.real-voice-transcript {
+    width: 100%;
+    min-height: 42px;
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+body.theme-dark .real-voice-transcript {
+    background: #0F172A;
+    border-color: #334155;
+    color: #94A3B8;
+}
+
+.real-dest-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.real-dest-chip {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid #E2E8F0;
+    background: #F1F5F9;
+    color: #1E293B;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+body.theme-dark .real-dest-chip {
+    background: #1E293B;
+    border-color: #334155;
+    color: #E2E8F0;
+}
+
+.real-dest-chip:hover {
+    background: #E2E8F0;
+    border-color: #94A3B8;
+    transform: translateY(-1px);
+}
+
+.real-search-input-row {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+}
+
+.real-search-input {
+    flex: 1;
+    padding: 11px 16px;
+    border-radius: 12px;
+    border: 1px solid #CBD5E1;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+}
+
+body.theme-dark .real-search-input {
+    background: #0F172A;
+    border-color: #334155;
+    color: #FFFFFF;
+}
+
+.real-search-input:focus {
+    border-color: #2563EB;
+}
+
+/* 자율주행 HUD 카드 */
+.real-hud-card {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    color: #FFFFFF;
+    border: 1px solid #334155;
+}
+
+.real-hud-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.live-motor-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 900;
+    white-space: nowrap;
+    animation: pulse-border 1.5s infinite;
+}
+
+.live-motor-badge.forward {
+    background: #ECFDF5;
+    color: #047857;
+    border: 2px solid #10B981;
+}
+
+.live-motor-badge.stop {
+    background: #FEF2F2;
+    color: #B91C1C;
+    border: 2px solid #EF4444;
+}
+
+.live-motor-badge.turn {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 2px solid #3B82F6;
+}
+
+.real-hud-instruction {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.real-hud-subinfo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 14px;
+    color: #94A3B8;
+    font-weight: 600;
+}
+
+.real-hud-subinfo span strong {
+    color: #38BDF8;
+}
+
+.real-hud-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.btn-hud-action {
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-hud-pause { background: #F59E0B; color: #1E293B; }
+.btn-hud-resume { background: #10B981; color: #FFFFFF; }
+.btn-hud-stop { background: #EF4444; color: #FFFFFF; }
+
+.btn-hud-action:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+/* 지도 영역 래퍼 */
+.real-map-wrapper {
+    height: 520px;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #CBD5E1;
+    background: #E2E8F0;
+}
+
+body.theme-dark .real-map-wrapper {
+    border-color: #334155;
+    background: #0F172A;
+}
+
+@keyframes pulse-border {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+

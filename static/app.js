@@ -10,6 +10,7 @@
 // 1. 글로벌 상태 및 통합 로거 유틸리티
 // ---------------------------------------------------------
 const AppState = {
+    opMode: 'real',         // 'real' (현장 실제 로보독 모드) | 'virtual' (가상 디지털트윈 시뮬레이터)
     currentMode: 'general', // 'senior' | 'general' | 'guardian' (나이에 따라 초기화됨)
     userAge: 28,            // 사용자 만 나이 (만 60세 미만: 일반모드 전용 / 만 60세 이상: 노인+일반모드)
     isSeniorEligible: false,
@@ -651,6 +652,36 @@ const BleController = {
         const barText = document.getElementById('barBleStatusText');
         if (barDot) barDot.className = `status-dot ${connected ? 'dot-connected' : 'disconnected'}`;
         if (barText) barText.textContent = connected ? deviceName : '미연결';
+
+        // 6. [신규] 실제 로보독 모드 HW 연결 배지 동기화
+        const dongleBadge = document.getElementById('realDongleBadge');
+        const dongleText = document.getElementById('realDongleText');
+        const bleBadge = document.getElementById('realBleBadge');
+        const bleText = document.getElementById('realBleText');
+
+        if (AppState.isUsbConnected && connected) {
+            if (dongleBadge) {
+                dongleBadge.classList.add('connected');
+                dongleText.textContent = `USB 동글 연결됨 (${deviceName})`;
+            }
+        } else if (!connected) {
+            if (dongleBadge) {
+                dongleBadge.classList.remove('connected');
+                dongleText.textContent = 'USB 동글 / COM 포트 미연결';
+            }
+        }
+
+        if (AppState.bleTxChar && connected) {
+            if (bleBadge) {
+                bleBadge.classList.add('connected');
+                bleText.textContent = `BLE 무선 연결됨 (${deviceName})`;
+            }
+        } else if (!connected) {
+            if (bleBadge) {
+                bleBadge.classList.remove('connected');
+                bleText.textContent = 'BLE 무선 미연결';
+            }
+        }
     },
 
     /**
@@ -659,17 +690,48 @@ const BleController = {
     async sendPacket(command) {
         // [만능 프로토콜 어댑터] micro:bit / 코코아팹 로보독 펌웨어 맞춤 다중 포맷 패킷 생성 (CRLF, LF, 단일 문자 동시 지원)
         let packetsToSend = [`${command}\r\n`, `${command}\n`];
-        if (command === 'CMD:FORWARD') {
+        const cmdStr = String(command);
+        if (cmdStr === 'CMD:FORWARD' || cmdStr === 'CMD:SIGNAL_START' || cmdStr === 'CMD:RESUME' || cmdStr.startsWith('CMD:START')) {
             packetsToSend = ['F\r\n', 'F\n', 'F', '1\r\n', '1\n', '1', 'CMD:FORWARD\r\n', 'forward\r\n'];
-        } else if (command === 'CMD:BACKWARD') {
+        } else if (cmdStr === 'CMD:BACKWARD') {
             packetsToSend = ['B\r\n', 'B\n', 'B', '2\r\n', '2\n', '2', 'CMD:BACKWARD\r\n', 'backward\r\n'];
-        } else if (command === 'CMD:TURN_LEFT') {
+        } else if (cmdStr === 'CMD:TURN_LEFT' || cmdStr === 'CMD:LEFT') {
             packetsToSend = ['L\r\n', 'L\n', 'L', '3\r\n', '3\n', '3', 'CMD:TURN_LEFT\r\n', 'left\r\n'];
-        } else if (command === 'CMD:TURN_RIGHT') {
+        } else if (cmdStr === 'CMD:TURN_RIGHT' || cmdStr === 'CMD:RIGHT') {
             packetsToSend = ['R\r\n', 'R\n', 'R', '4\r\n', '4\n', '4', 'CMD:TURN_RIGHT\r\n', 'right\r\n'];
-        } else if (command === 'CMD:STOP') {
+        } else if (cmdStr === 'CMD:STOP' || cmdStr === 'CMD:SIGNAL_STOP' || cmdStr === 'CMD:PAUSE' || cmdStr === 'CMD:E-STOP') {
             packetsToSend = ['S\r\n', 'S\n', 'S', '0\r\n', '0\n', '0', 'CMD:STOP\r\n', 'stop\r\n'];
         }
+
+        // [실제 로보독 뷰 HUD 인디케이터 동기화]
+        try {
+            const txIndicator = document.getElementById('realPacketTxIndicator');
+            if (txIndicator) {
+                txIndicator.textContent = `[TX] ${packetsToSend[0].trim()}`;
+                txIndicator.className = 'badge badge-green';
+            }
+            const liveBadge = document.getElementById('realLiveMotorBadge');
+            const liveText = document.getElementById('realLiveMotorText');
+            if (liveBadge && liveText) {
+                if (cmdStr === 'CMD:FORWARD' || cmdStr === 'CMD:SIGNAL_START' || cmdStr === 'CMD:RESUME' || cmdStr.startsWith('CMD:START')) {
+                    liveBadge.className = 'live-motor-badge forward';
+                    liveBadge.firstElementChild.textContent = '🐕';
+                    liveText.textContent = '로보독 직진 전진 중 [F]';
+                } else if (cmdStr === 'CMD:STOP' || cmdStr === 'CMD:SIGNAL_STOP' || cmdStr === 'CMD:PAUSE' || cmdStr === 'CMD:E-STOP') {
+                    liveBadge.className = 'live-motor-badge stop';
+                    liveBadge.firstElementChild.textContent = '🛑';
+                    liveText.textContent = '로보독 안전 정지 [S]';
+                } else if (cmdStr === 'CMD:TURN_LEFT' || cmdStr === 'CMD:LEFT') {
+                    liveBadge.className = 'live-motor-badge turn';
+                    liveBadge.firstElementChild.textContent = '↰';
+                    liveText.textContent = '로보독 좌회전 중 [L]';
+                } else if (cmdStr === 'CMD:TURN_RIGHT' || cmdStr === 'CMD:RIGHT') {
+                    liveBadge.className = 'live-motor-badge turn';
+                    liveBadge.firstElementChild.textContent = '↱';
+                    liveText.textContent = '로보독 우회전 중 [R]';
+                }
+            }
+        } catch (uiErr) {}
 
         this.logTerminal(`[TX 송신] >> ${command} (${packetsToSend[0].trim()})`, 'tx');
         logEvent('[BLE]', `[TX 송신] >> ${command}`, 'info');
@@ -4094,6 +4156,27 @@ const RealMapManager = {
                     } else {
                         this.updateNavHud(this.currentStepIndex, currentRemainDist, currentRemainTime, progress * 100);
                     }
+
+                    // [실제 로보독 뷰 HUD & 모터 조향 실시간 연동]
+                    const currentInst = steps[this.currentStepIndex]?.instruction || '';
+                    if (typeof RealRobotAutoPilot !== 'undefined') {
+                        RealRobotAutoPilot.updateNavHud(
+                            currentInst,
+                            `${currentRemainDist} m`,
+                            `도보 약 ${currentRemainTime}분`
+                        );
+                    }
+
+                    // 스텝 전환 시 모터 조향 명령(L/R/F) 능동 전송
+                    if (stepIdx !== this.currentStepIndex && AppState.isWalking) {
+                        if (currentInst.includes('좌') || currentInst.includes('왼쪽')) {
+                            BleController.sendPacket('CMD:TURN_LEFT');
+                        } else if (currentInst.includes('우') || currentInst.includes('오른쪽')) {
+                            BleController.sendPacket('CMD:TURN_RIGHT');
+                        } else {
+                            BleController.sendPacket('CMD:FORWARD');
+                        }
+                    }
                 }
 
                 logEvent('[NAV]', `[실제 도로 주행] ${wp.name} (위도: ${wp.lat.toFixed(5)}, 경도: ${wp.lng.toFixed(5)})`, 'info');
@@ -4131,6 +4214,10 @@ const RealMapManager = {
         if (seniorHudBox) {
             const sText = document.getElementById('seniorNavText');
             if (sText) sText.textContent = '🎉 목적지 도착 완료!';
+        }
+
+        if (typeof RealRobotAutoPilot !== 'undefined') {
+            RealRobotAutoPilot.updateNavHud('🎉 목적지에 안전하게 도착했습니다!', '0 m', '도착');
         }
 
         VoiceEngine.speak(`목적지에 안전하게 도착했습니다. 오늘도 안전하게 모셨습니다!`);
@@ -4868,7 +4955,16 @@ const TrafficSignalEngine = {
 
     // [로보독 제어] 횡단보도 10m 접근 시 적색 정지 / 녹색 출발 BLE 패킷 전송
     evaluateRobotSafety(sig, distToRobot) {
-        if (!sig || !AppState.currentDest) return;
+        // [실제 로보독 뷰 HUD 신호등 상태 동기화]
+        if (typeof RealRobotAutoPilot !== 'undefined') {
+            if (sig.color === 'RED') {
+                RealRobotAutoPilot.updateNavHud(null, null, null, `🔴 적색 대기 (${sig.remainingTime}초, ${sig.name})`);
+            } else if (sig.isBlinking) {
+                RealRobotAutoPilot.updateNavHud(null, null, null, `⚠️ 점멸 주의 (${sig.remainingTime}초 남음, ${sig.name})`);
+            } else {
+                RealRobotAutoPilot.updateNavHud(null, null, null, `🟢 보행 가능 (${sig.remainingTime}초 남음, ${sig.name})`);
+            }
+        }
 
         // 횡단보도 10m 이내 접근 시 (8~12m 구간)
         if (distToRobot <= 12) {
@@ -5441,6 +5537,19 @@ async function startNavigation(destName, ttsMessage, explicitCoords = null) {
     }
 
     BleController.sendPacket(`CMD:START:DEST=${verifiedName}`);
+    // [현장 해커톤 실전 제어] 출발 즉시 micro:bit로 직진 전진 모터 패킷(F) 방출
+    BleController.sendPacket('CMD:FORWARD');
+
+    if (typeof RealRobotAutoPilot !== 'undefined') {
+        RealRobotAutoPilot.updateNavHud(
+            `🐕 ${verifiedName} 방면으로 로보독 출발`,
+            '계산 중...',
+            '계산 중...'
+        );
+        const destInput = document.getElementById('inputRealSearch');
+        if (destInput) destInput.value = verifiedName;
+    }
+
     if (typeof LeashController !== 'undefined') {
         LeashController.triggerHaptic('forward');
     }
@@ -5576,6 +5685,262 @@ function switchMode(targetMode) {
         VoiceEngine.speak('시각장애인 안심 보행 모드가 가동되었습니다. 화면 아무 곳이나 탭하고 가실 곳을 말씀해 주세요.', true);
     }
 }
+
+// ---------------------------------------------------------
+// 11-1. [신규] 실행 모드 전환기 (🐕 실제 로보독 모드 ↔ 🖥️ 가상 시뮬레이터)
+// ---------------------------------------------------------
+function switchOpMode(mode) {
+    AppState.opMode = mode;
+    const tabReal = document.getElementById('tabOpRealRobot');
+    const tabSim = document.getElementById('tabOpVirtualSim');
+    const realSec = document.getElementById('realRobotSection');
+    const simSec = document.getElementById('virtualSimulatorSection');
+    const realMapEl = document.getElementById('realMapContainer');
+    const realMapWrapper = document.getElementById('realRobotMapWrapper');
+    const virtualMapBox = document.querySelector('#generalView .map-box');
+
+    if (mode === 'real') {
+        if (tabReal) tabReal.classList.add('active');
+        if (tabSim) tabSim.classList.remove('active');
+        if (realSec) realSec.style.display = 'flex';
+        if (simSec) simSec.style.display = 'none';
+
+        // 지도를 실제 로보독 전용 래퍼로 이동 마운트
+        if (realMapEl && realMapWrapper && realMapEl.parentElement !== realMapWrapper) {
+            realMapWrapper.appendChild(realMapEl);
+        }
+        logEvent('[OP-MODE]', '🐕 [실제 로보독 모드] 활성화: 현장 해커톤 micro:bit 자율 주행 및 음성 관제 가동', 'success');
+    } else {
+        if (tabReal) tabReal.classList.remove('active');
+        if (tabSim) tabSim.classList.add('active');
+        if (realSec) realSec.style.display = 'none';
+        if (simSec) simSec.style.display = 'block';
+
+        // 지도를 가상 시뮬레이터 일반 뷰의 맵 박스로 복귀 마운트
+        if (realMapEl && virtualMapBox && realMapEl.parentElement !== virtualMapBox) {
+            virtualMapBox.appendChild(realMapEl);
+        }
+        logEvent('[OP-MODE]', '🖥️ [가상 시뮬레이터 모드] 활성화: 디지털 트윈 가상 주행 모드 전환', 'info');
+    }
+
+    // Leaflet 지도 크기 리사이즈 보정
+    if (RealMapManager && RealMapManager.map) {
+        setTimeout(() => {
+            RealMapManager.map.invalidateSize();
+        }, 120);
+    }
+}
+
+// ---------------------------------------------------------
+// 11-2. [신규] 🐕 실제 로보독 자율주행 & 음성 관제 매니저 (RealRobotAutoPilot)
+// ---------------------------------------------------------
+const RealRobotAutoPilot = {
+    voiceRecognition: null,
+    isListening: false,
+
+    init() {
+        this.bindControls();
+        this.initVoice();
+    },
+
+    bindControls() {
+        // 1. 실행 모드 탭 바 클릭
+        const tabReal = document.getElementById('tabOpRealRobot');
+        const tabSim = document.getElementById('tabOpVirtualSim');
+        if (tabReal) tabReal.addEventListener('click', () => switchOpMode('real'));
+        if (tabSim) tabSim.addEventListener('click', () => switchOpMode('virtual'));
+
+        // 2. 하드웨어 연결 버튼
+        const btnDongle = document.getElementById('btnRealConnectDongle');
+        const btnBle = document.getElementById('btnRealConnectBle');
+        if (btnDongle) {
+            btnDongle.addEventListener('click', () => BleController.connectUsbSerial());
+        }
+        if (btnBle) {
+            btnBle.addEventListener('click', () => BleController.connect('microbit'));
+        }
+
+        // 3. 수동 모터 패킷 즉시 전송 테스트 패드
+        const btnF = document.getElementById('btnRealTestF');
+        const btnS = document.getElementById('btnRealTestS');
+        const btnL = document.getElementById('btnRealTestL');
+        const btnR = document.getElementById('btnRealTestR');
+        if (btnF) btnF.addEventListener('click', () => BleController.sendPacket('CMD:FORWARD'));
+        if (btnS) btnS.addEventListener('click', () => BleController.sendPacket('CMD:STOP'));
+        if (btnL) btnL.addEventListener('click', () => BleController.sendPacket('CMD:TURN_LEFT'));
+        if (btnR) btnR.addEventListener('click', () => BleController.sendPacket('CMD:TURN_RIGHT'));
+
+        // 4. 빠른 목적지 칩 클릭
+        document.querySelectorAll('.real-dest-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const dest = chip.getAttribute('data-dest');
+                if (dest) {
+                    const inputEl = document.getElementById('inputRealSearch');
+                    if (inputEl) inputEl.value = dest;
+                    startNavigation(dest, null);
+                }
+            });
+        });
+
+        // 5. 텍스트 검색 입력 및 탐색 버튼
+        const inputSearch = document.getElementById('inputRealSearch');
+        const btnSearch = document.getElementById('btnRealSearchRoute');
+        if (btnSearch && inputSearch) {
+            btnSearch.addEventListener('click', () => {
+                const q = inputSearch.value.trim();
+                if (q) startNavigation(q, null);
+            });
+            inputSearch.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const q = inputSearch.value.trim();
+                    if (q) startNavigation(q, null);
+                }
+            });
+        }
+
+        // 6. 자율주행 HUD 제어 버튼
+        const btnPause = document.getElementById('btnRealNavPause');
+        const btnResume = document.getElementById('btnRealNavResume');
+        const btnStop = document.getElementById('btnRealNavStop');
+
+        if (btnPause) {
+            btnPause.addEventListener('click', () => {
+                AppState.isWalking = false;
+                BleController.sendPacket('CMD:STOP');
+                logEvent('[AUTOPILOT]', '⏸️ [사용자 일시정지] 로보독 정지 (S)', 'warn');
+            });
+        }
+        if (btnResume) {
+            btnResume.addEventListener('click', () => {
+                AppState.isWalking = true;
+                BleController.sendPacket('CMD:FORWARD');
+                logEvent('[AUTOPILOT]', '▶️ [사용자 주행 재개] 로보독 전진 주행 (F)', 'success');
+            });
+        }
+        if (btnStop) {
+            btnStop.addEventListener('click', () => {
+                AppState.isWalking = false;
+                BleController.sendPacket('CMD:STOP');
+                if (RealMapManager.trackingInterval) {
+                    clearInterval(RealMapManager.trackingInterval);
+                }
+                const hudText = document.getElementById('realHudInstructionText');
+                if (hudText) hudText.textContent = '안내가 종료되었습니다. 새로운 목적지를 선택해 주세요.';
+                const hudDest = document.getElementById('realHudDestName');
+                if (hudDest) hudDest.textContent = '미설정';
+                const hudDist = document.getElementById('realHudRemainDist');
+                if (hudDist) hudDist.textContent = '-';
+                const hudTime = document.getElementById('realHudRemainTime');
+                if (hudTime) hudTime.textContent = '-';
+                logEvent('[AUTOPILOT]', '⏹️ [안내 종료] 로보독 정지 및 경로 안내 취소', 'info');
+            });
+        }
+    },
+
+    initVoice() {
+        const micBtn = document.getElementById('btnRealVoiceMic');
+        const transcriptEl = document.getElementById('realVoiceTranscript');
+        const promptEl = document.getElementById('realVoicePrompt');
+        if (!micBtn) return;
+
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) {
+            if (transcriptEl) transcriptEl.textContent = '⚠️ 현재 브라우저가 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해 주세요.';
+            return;
+        }
+
+        const recognition = new SpeechRec();
+        recognition.lang = 'ko-KR';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+            this.isListening = true;
+            micBtn.classList.add('recording');
+            if (promptEl) promptEl.textContent = '말씀을 듣고 있습니다... (목적지를 말씀하세요)';
+            if (transcriptEl) transcriptEl.innerHTML = '<span style="color: #2563EB;">🎙️ 듣는 중... "세종대학교 가자"</span>';
+        };
+
+        recognition.onresult = (e) => {
+            let interim = '';
+            let final = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) {
+                    final += e.results[i][0].transcript;
+                } else {
+                    interim += e.results[i][0].transcript;
+                }
+            }
+            if (transcriptEl) {
+                transcriptEl.textContent = final || interim || '음성 인식 중...';
+            }
+            if (final) {
+                this.handleVoiceCommand(final.trim());
+            }
+        };
+
+        recognition.onerror = (e) => {
+            console.warn('Real Robot Voice Recognition Error:', e);
+            this.isListening = false;
+            micBtn.classList.remove('recording');
+            if (promptEl) promptEl.textContent = '음성 인식 대기 중';
+            if (transcriptEl) transcriptEl.textContent = '마이크를 누르고 다시 말씀해 주세요.';
+        };
+
+        recognition.onend = () => {
+            this.isListening = false;
+            micBtn.classList.remove('recording');
+            if (promptEl) promptEl.textContent = '마이크를 누르고 목적지를 말씀하세요';
+        };
+
+        this.voiceRecognition = recognition;
+
+        micBtn.addEventListener('click', () => {
+            if (this.isListening) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.warn(err);
+                }
+            }
+        });
+    },
+
+    handleVoiceCommand(text) {
+        let cleaned = text.trim();
+        cleaned = cleaned.replace(/(으로|로)?\s*(안내해줘|가자|가줘|데려다줘|출발|알려줘|어디야|어디있어|가고싶어|경로|길안내)$/g, '').trim();
+        cleaned = cleaned.replace(/^로보독\s*/g, '').trim();
+
+        if (!cleaned) return;
+
+        const inputSearch = document.getElementById('inputRealSearch');
+        if (inputSearch) inputSearch.value = cleaned;
+
+        const transcriptEl = document.getElementById('realVoiceTranscript');
+        if (transcriptEl) {
+            transcriptEl.innerHTML = `<strong>🗣️ [인식 완료]</strong> "${cleaned}" 탐색 시작...`;
+        }
+
+        VoiceEngine.speak(`${cleaned}(으)로 안내를 시작합니다.`);
+        startNavigation(cleaned, null);
+    },
+
+    updateNavHud(instruction, distText, timeText, signalText = null) {
+        const instTextEl = document.getElementById('realHudInstructionText');
+        const remainDistEl = document.getElementById('realHudRemainDist');
+        const remainTimeEl = document.getElementById('realHudRemainTime');
+        const destNameEl = document.getElementById('realHudDestName');
+        const signalTextEl = document.getElementById('realHudSignalText');
+
+        if (instTextEl && instruction) instTextEl.textContent = instruction;
+        if (remainDistEl && distText) remainDistEl.textContent = distText;
+        if (remainTimeEl && timeText) remainTimeEl.textContent = timeText;
+        if (destNameEl && AppState.currentDest) destNameEl.textContent = AppState.currentDest;
+        if (signalTextEl && signalText) signalTextEl.textContent = signalText;
+    }
+};
 
 // ---------------------------------------------------------
 // 12. 이벤트 바인딩 및 앱 시작
@@ -5861,7 +6226,11 @@ document.addEventListener('DOMContentLoaded', () => {
     AllPlacesModalManager.init();
     FaceIdManager.init();
     BlindTouchManager.init();
+    RealRobotAutoPilot.init();
 
     // 12. 초기 얼굴 인식(Face ID) 안내 실행
     FaceIdManager.runVerification();
+
+    // 13. [신규] 현장 해커톤 맞춤 기본 모드를 실제 로보독 모드('real')로 활성화
+    switchOpMode('real');
 });

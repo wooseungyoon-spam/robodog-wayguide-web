@@ -2220,6 +2220,187 @@
     </header>
 
     <!-- =========================================================
+         [신규] 실행 모드 탭 바 (실제 로보독 모드 vs 가상 시뮬레이터)
+         ========================================================= -->
+    <div class="op-mode-tab-bar" id="opModeTabBar">
+        <div class="op-mode-tab-inner">
+            <button id="tabOpRealRobot" class="op-mode-tab active" type="button">
+                <span class="tab-emoji">🐕</span>
+                <span class="tab-text">실제 로보독 모드 (현장 해커톤)</span>
+                <span class="tab-pill pill-live">LIVE HW</span>
+            </button>
+            <button id="tabOpVirtualSim" class="op-mode-tab" type="button">
+                <span class="tab-emoji">🖥️</span>
+                <span class="tab-text">가상 시뮬레이터 (디지털 트윈)</span>
+                <span class="tab-pill pill-sim">VIRTUAL</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         [신규] 🐕 실제 로보독 전용 실전 뷰 (Real Robot Live View)
+         ========================================================= -->
+    <section id="realRobotSection" class="real-robot-view">
+        
+        <!-- 상단 2열 카드 그리드: 하드웨어 연결 + 음성인식 목적지 -->
+        <div class="real-robot-grid-2col">
+            
+            <!-- 1. 하드웨어 연결 & 모터 수동 테스트 카드 -->
+            <div class="real-robot-card">
+                <div class="real-card-header">
+                    <div class="real-card-title">
+                        <span>📡</span>
+                        <span>로보독 하드웨어 연결 & 상태</span>
+                    </div>
+                    <span id="realPacketTxIndicator" class="badge badge-gray" style="font-size: 11px;">TX 대기</span>
+                </div>
+                
+                <div class="real-hw-status-row">
+                    <div id="realDongleBadge" class="real-hw-badge">
+                        <span>🔌</span>
+                        <span id="realDongleText">USB 동글 / COM 포트 미연결</span>
+                    </div>
+                    <div id="realBleBadge" class="real-hw-badge">
+                        <span>📶</span>
+                        <span id="realBleText">BLE 무선 미연결</span>
+                    </div>
+                </div>
+
+                <div class="real-btn-row">
+                    <button id="btnRealConnectDongle" class="btn-real-hw primary" type="button">
+                        <span>🔌</span>
+                        <span>노트북 USB 동글 연결</span>
+                    </button>
+                    <button id="btnRealConnectBle" class="btn-real-hw" type="button">
+                        <span>📶</span>
+                        <span>블루투스(BLE) 검색</span>
+                    </button>
+                </div>
+
+                <!-- 수동 모터 패킷 즉시 전송 테스트 패드 -->
+                <div class="real-motor-test-pad">
+                    <div class="motor-pad-title">⚡ 모터 다이렉트 테스트 (즉시 패킷 전송)</div>
+                    <div class="motor-btn-cluster">
+                        <button id="btnRealTestF" class="btn-motor-cmd btn-f" type="button" title="전진 (F / 1)">
+                            <span>⬆️</span>
+                            <span>전진(F)</span>
+                        </button>
+                        <button id="btnRealTestS" class="btn-motor-cmd btn-s" type="button" title="정지 (S / 0)">
+                            <span>🛑</span>
+                            <span>정지(S)</span>
+                        </button>
+                        <button id="btnRealTestL" class="btn-motor-cmd btn-l" type="button" title="좌회전 (L / 3)">
+                            <span>↰</span>
+                            <span>좌회전(L)</span>
+                        </button>
+                        <button id="btnRealTestR" class="btn-motor-cmd btn-r" type="button" title="우회전 (R / 4)">
+                            <span>↱</span>
+                            <span>우회전(R)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 음성 인식 목적지 입력 카드 -->
+            <div class="real-robot-card">
+                <div class="real-card-header">
+                    <div class="real-card-title">
+                        <span>🎤</span>
+                        <span>음성 인식 목적지 검색</span>
+                    </div>
+                    <span class="badge badge-blue">웹 STT 실시간 연동</span>
+                </div>
+
+                <div class="real-voice-box">
+                    <button id="btnRealVoiceMic" class="real-mic-btn" type="button" aria-label="음성으로 목적지 말하기">
+                        <span>🎤</span>
+                    </button>
+                    <div id="realVoicePrompt" class="real-voice-prompt">마이크를 누르고 목적지를 말씀하세요</div>
+                    <div class="real-voice-sub">예: "세종대학교 대양AI관 가자", "어린이대공원역 가자"</div>
+                    
+                    <div id="realVoiceTranscript" class="real-voice-transcript">
+                        <span>🎙️ 음성 대기 중... 버튼을 누르면 음성을 인식합니다.</span>
+                    </div>
+
+                    <!-- 원터치 빠른 목적지 칩 -->
+                    <div class="real-dest-chips">
+                        <button class="real-dest-chip" type="button" data-dest="세종대학교 대양AI관">🏫 대양AI관</button>
+                        <button class="real-dest-chip" type="button" data-dest="어린이대공원역 (7호선)">🚇 어린이대공원역</button>
+                        <button class="real-dest-chip" type="button" data-dest="세종대학교 정문">🏛️ 세종대 정문</button>
+                        <button class="real-dest-chip" type="button" data-dest="수지 온누리약국">💊 약국</button>
+                        <button class="real-dest-chip" type="button" data-dest="우리집">🏡 우리집</button>
+                    </div>
+
+                    <!-- 텍스트 검색 폴백 입력창 -->
+                    <div class="real-search-input-row">
+                        <input id="inputRealSearch" class="real-search-input" type="text" placeholder="직접 목적지 입력 (예: 세종대학교, 어린이대공원역)">
+                        <button id="btnRealSearchRoute" class="btn-real-hw primary" style="flex: 0 0 100px;" type="button">
+                            <span>🔍 탐색</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 실시간 로보독 자율주행 관제 & C-ITS 신호 HUD -->
+        <div class="real-robot-card real-hud-card">
+            <div class="real-hud-top-row">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div id="realLiveMotorBadge" class="live-motor-badge stop">
+                        <span>🛑</span>
+                        <span id="realLiveMotorText">로보독 정지 대기 중 [S]</span>
+                    </div>
+                    <span id="realAutopilotModeBadge" class="badge badge-green">자율 주행 시스템 준비됨</span>
+                </div>
+                
+                <div class="real-hud-actions">
+                    <button id="btnRealNavPause" class="btn-hud-action btn-hud-pause" type="button">
+                        <span>⏸️ 일시 정지 (S)</span>
+                    </button>
+                    <button id="btnRealNavResume" class="btn-hud-action btn-hud-resume" type="button">
+                        <span>▶️ 전진 재개 (F)</span>
+                    </button>
+                    <button id="btnRealNavStop" class="btn-hud-action btn-hud-stop" type="button">
+                        <span>⏹️ 안내 종료</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="real-hud-instruction" id="realHudInstruction">
+                <span>⬆️</span>
+                <span id="realHudInstructionText">목적지를 설정하면 실시간 안내 및 모터 제어가 시작됩니다.</span>
+            </div>
+
+            <div class="real-hud-subinfo">
+                <span>목적지: <strong id="realHudDestName">미설정</strong></span>
+                <span>남은 거리: <strong id="realHudRemainDist">-</strong></span>
+                <span>예상 시간: <strong id="realHudRemainTime">-</strong></span>
+                <span>전방 신호등: <strong id="realHudSignalText">안전 인도 구간</strong></span>
+            </div>
+        </div>
+
+        <!-- 4. 실시간 OpenStreetMap / Leaflet 도로 지도 래퍼 -->
+        <div class="real-robot-card" style="padding: 12px;">
+            <div class="real-card-header" style="margin-bottom: 8px;">
+                <div class="real-card-title">
+                    <span>🗺️</span>
+                    <span>실제 보행 도로 지도 & 로보독 실시간 위치 추적</span>
+                </div>
+                <span class="badge badge-blue">C-ITS 실시간 신호등 연동</span>
+            </div>
+            <div id="realRobotMapWrapper" class="real-map-wrapper">
+                <!-- realMapContainer가 동적으로 여기로 마운트됩니다 -->
+            </div>
+        </div>
+
+    </section>
+
+    <!-- =========================================================
+         [기존 가상 모드 래퍼] 디지털 트윈 시뮬레이터 (일반/노인/시각장애인)
+         ========================================================= -->
+    <div id="virtualSimulatorSection" style="display: none;">
+
+    <!-- =========================================================
          2. [모드 1] 👵 노인 안심 모드 (Senior Mode - 기본 숨김)
          ========================================================= -->
     <main id="seniorView" class="view-container senior-container" style="display: none;">
@@ -2724,6 +2905,8 @@
         </section>
 
     </main>
+    </div>
+    <!-- /#virtualSimulatorSection -->
 
     <!-- =========================================================
          5. 비상 낙상 감지 및 긴급 알림 모달 오버레이
@@ -3700,7 +3883,7 @@
     </div>
 
     <!-- Frontend Main Script with cache-busting -->
-    <script src="{{ url_for('static', filename='app.js') }}?v=42.0_voice_toggle_record"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=43.0_real_robot_op_mode"></script>
     <!-- =========================================================
          [신규] 🦯 시각장애인 전체 화면 원터치 GPS 탐지 & 음성 길안내 서피스
          ========================================================= -->
