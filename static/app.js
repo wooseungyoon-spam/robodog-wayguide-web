@@ -241,6 +241,86 @@ const BleController = {
                 this.logTerminal(`[SYS] 자율 보행 추종 모드: ${AppState.bleAutoFollow ? 'ON (활성화)' : 'OFF (수동 전용)'}`, 'info');
             });
         }
+
+        // ---------------------------------------------------------
+        // [신규 1] ⌨️ 전역 키보드 방향키 조종 (Arrow Keys / WASD / Space)
+        // ---------------------------------------------------------
+        const keyCmdMap = {
+            'ArrowUp': 'CMD:FORWARD',
+            'KeyW': 'CMD:FORWARD',
+            'w': 'CMD:FORWARD',
+            'W': 'CMD:FORWARD',
+            'ArrowDown': 'CMD:BACKWARD',
+            'KeyS': 'CMD:BACKWARD',
+            's': 'CMD:BACKWARD',
+            'S': 'CMD:BACKWARD',
+            'ArrowLeft': 'CMD:TURN_LEFT',
+            'KeyA': 'CMD:TURN_LEFT',
+            'a': 'CMD:TURN_LEFT',
+            'A': 'CMD:TURN_LEFT',
+            'ArrowRight': 'CMD:TURN_RIGHT',
+            'KeyD': 'CMD:TURN_RIGHT',
+            'd': 'CMD:TURN_RIGHT',
+            'D': 'CMD:TURN_RIGHT',
+            ' ': 'CMD:STOP',
+            'Space': 'CMD:STOP',
+            'Escape': 'CMD:STOP'
+        };
+
+        const cmdBtnSelector = {
+            'CMD:FORWARD': ['#btnRealTestF', '#btnDpadForward'],
+            'CMD:BACKWARD': ['#btnRealTestB', '#btnDpadBackward'],
+            'CMD:TURN_LEFT': ['#btnRealTestL', '#btnDpadLeft'],
+            'CMD:TURN_RIGHT': ['#btnRealTestR', '#btnDpadRight'],
+            'CMD:STOP': ['#btnRealTestS', '#btnDpadStop']
+        };
+
+        let lastPressedKey = null;
+
+        window.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement ? document.activeElement.tagName.toUpperCase() : '';
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) {
+                return;
+            }
+
+            const cmd = keyCmdMap[e.key] || keyCmdMap[e.code];
+            if (!cmd) return;
+
+            // 방향키 및 스페이스바 브라우저 기본 스크롤 방지
+            e.preventDefault();
+
+            // 동일 키 연속 누름 중복 송신 방지
+            if (e.repeat && lastPressedKey === e.key) return;
+            lastPressedKey = e.key;
+
+            this.sendPacket(cmd);
+
+            // 자율주행 실행 중 수동 조작 또는 즉시정지 시 자율주행 안전 취소
+            if (typeof HackathonMatNavigator !== 'undefined' && HackathonMatNavigator.isNavigating) {
+                if (cmd === 'CMD:STOP' || cmd === 'CMD:BACKWARD') {
+                    HackathonMatNavigator.stop();
+                }
+            }
+
+            // 화면 버튼 시각적 active 하이라이트
+            const selectors = cmdBtnSelector[cmd] || [];
+            selectors.forEach(sel => {
+                const el = document.querySelector(sel);
+                if (el) el.classList.add('active');
+            });
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const cmd = keyCmdMap[e.key] || keyCmdMap[e.code];
+            if (!cmd) return;
+            if (lastPressedKey === e.key) lastPressedKey = null;
+
+            const selectors = cmdBtnSelector[cmd] || [];
+            selectors.forEach(sel => {
+                const el = document.querySelector(sel);
+                if (el) el.classList.remove('active');
+            });
+        });
     },
 
     
@@ -737,6 +817,10 @@ const BleController = {
                     liveBadge.className = 'live-motor-badge forward';
                     liveBadge.firstElementChild.textContent = '🐕';
                     liveText.textContent = '로보독 직진 전진 중 [F]';
+                } else if (cmdStr === 'CMD:BACKWARD') {
+                    liveBadge.className = 'live-motor-badge backward';
+                    liveBadge.firstElementChild.textContent = '⬇️';
+                    liveText.textContent = '로보독 후진 중 [B]';
                 } else if (cmdStr === 'CMD:STOP' || cmdStr === 'CMD:SIGNAL_STOP' || cmdStr === 'CMD:PAUSE' || cmdStr === 'CMD:E-STOP') {
                     liveBadge.className = 'live-motor-badge stop';
                     liveBadge.firstElementChild.textContent = '🛑';
@@ -5850,6 +5934,8 @@ const HackathonMatNavigator = {
     },
 
     currentPos: { mmX: 770, mmY: 645, pctX: 77, pctY: 86 },
+    currentHeading: 0, // 0°: 북쪽(상단 방향), 90°: 동쪽(우측), -90°: 서쪽(좌측), 180°: 남쪽(하단)
+    isSetRobotPosMode: false,
     activeDestKey: null,
     activeStepIdx: 0,
     stepTimer: null,
@@ -5869,18 +5955,55 @@ const HackathonMatNavigator = {
         return '병원';
     },
 
+    /**
+     * [신규] 로보독의 현재 물리적 위치를 수동으로 지정 (매트 위 임의의 위치에 내려놓았을 때)
+     */
+    setRobotPosition(xMm, yMm) {
+        this.stop();
+        const x = Math.max(0, Math.min(1000, Number(xMm) || 0));
+        const y = Math.max(0, Math.min(750, Number(yMm) || 0));
+        const pctX = Math.round((x / 1000) * 100);
+        const pctY = Math.round((y / 750) * 100);
+
+        this.currentPos = { mmX: x, mmY: y, pctX: pctX, pctY: pctY };
+        this.currentHeading = 0;
+        this.updateRobotMarker(pctX, pctY, 0, 400);
+        this.clearRouteLine();
+        this.clearTargetMarker();
+
+        const coordCur = document.getElementById('coordCurrentPos');
+        const coordTgt = document.getElementById('coordTargetPos');
+        const coordStep = document.getElementById('coordMotionStep');
+        const coordPkt = document.getElementById('coordMotorPkt');
+        if (coordCur) coordCur.textContent = `X: ${x}mm, Y: ${y}mm (로봇 위치 설정됨)`;
+        if (coordTgt) coordTgt.textContent = '이동할 목표 지점을 클릭하세요';
+        if (coordStep) coordStep.textContent = '로봇 위치 수동 설정 완료';
+        if (coordPkt) coordPkt.textContent = '[TX] 정지 (S)';
+
+        const inputX = document.getElementById('inputCustomCoordX');
+        const inputY = document.getElementById('inputCustomCoordY');
+        if (inputX) inputX.value = x;
+        if (inputY) inputY.value = y;
+
+        BleController.sendPacket('CMD:STOP');
+        VoiceEngine.speak('로보독 현재 위치가 설정되었습니다. 이제 이동하실 목표 지점을 클릭해 주세요.');
+        logEvent('[MAT-NAV]', `📍 로보독 현재 위치 수동 설정: (${x}mm, ${y}mm)`, 'success');
+    },
+
     resetToStart() {
         this.stop();
+        this.currentHeading = 0;
         this.currentPos = { mmX: 770, mmY: 645, pctX: 77, pctY: 86 };
-        this.updateRobotMarker(77, 86);
+        this.updateRobotMarker(77, 86, 0, 400);
         this.clearRouteLine();
+        this.clearTargetMarker();
 
         const coordCur = document.getElementById('coordCurrentPos');
         const coordTgt = document.getElementById('coordTargetPos');
         const coordStep = document.getElementById('coordMotionStep');
         const coordPkt = document.getElementById('coordMotorPkt');
         if (coordCur) coordCur.textContent = 'X: 770mm, Y: 645mm (START)';
-        if (coordTgt) coordTgt.textContent = '출발 준비 완료';
+        if (coordTgt) coordTgt.textContent = '원하는 지점을 클릭하세요';
         if (coordStep) coordStep.textContent = '출발선 대기 중';
         if (coordPkt) coordPkt.textContent = '[TX] 정지 (S)';
 
@@ -5894,6 +6017,9 @@ const HackathonMatNavigator = {
         logEvent('[MAT-NAV]', '🚩 로보독 출발선(START: 770mm, 645mm) 초기화 완료', 'info');
     },
 
+    /**
+     * [핵심 기능] 경기장 매트 위 특정 좌표 클릭/입력 시 로보독 자율주행 (회전각 + 거리 자동 계산)
+     */
     navigateByCoordinates(targetXMm, targetYMm, label = '지정 좌표') {
         const x = Math.max(0, Math.min(1000, Number(targetXMm) || 0));
         const y = Math.max(0, Math.min(750, Number(targetYMm) || 0));
@@ -5907,10 +6033,125 @@ const HackathonMatNavigator = {
         AppState.isWalking = true;
         AppState.currentDest = `${label} (${x}, ${y})`;
 
-        const deltaX = x - this.currentPos.mmX;
-        const deltaY = y - this.currentPos.mmY;
+        // 목표 지점 핀 표시
+        this.showTargetMarker(pctX, pctY, x, y);
+
+        // 현재 위치와 목표 위치 간의 상대 변위
+        const startPos = { ...this.currentPos };
+        const deltaX = x - startPos.mmX;
+        const deltaY = y - startPos.mmY; // Y=0이 상단(북쪽)
         const distMm = Math.round(Math.hypot(deltaX, deltaY));
-        const durationMs = Math.max(1500, Math.min(6000, Math.round(distMm * 8)));
+
+        if (distMm < 30) {
+            VoiceEngine.speak('이미 지정하신 지점에 도착해 있습니다.');
+            this.finishArrival('CUSTOM');
+            return;
+        }
+
+        // 북쪽(-Y) 기준 목표 방향 각도 산출 (-180° ~ +180°)
+        const angleRad = Math.atan2(deltaX, -deltaY);
+        const targetAngleDeg = Math.round(angleRad * (180 / Math.PI));
+
+        const steps = [];
+
+        // 1. 회전이 필요한 경우: 좌회전, 우회전 또는 180도 반전 단계 생성
+        if (targetAngleDeg < -20 && targetAngleDeg >= -150) {
+            // 좌회전
+            const turnTime = Math.max(600, Math.min(1400, Math.round(Math.abs(targetAngleDeg) * 11)));
+            steps.push({
+                cmd: 'CMD:TURN_LEFT',
+                pkt: 'L',
+                desc: `1단계: 목표 지점 방향으로 좌회전 선회 (${Math.abs(targetAngleDeg)}°)...`,
+                duration: turnTime,
+                heading: targetAngleDeg,
+                pctX: startPos.pctX,
+                pctY: startPos.pctY,
+                mmX: startPos.mmX,
+                mmY: startPos.mmY,
+                signal: '좌회전 선회'
+            });
+        } else if (targetAngleDeg > 20 && targetAngleDeg <= 150) {
+            // 우회전
+            const turnTime = Math.max(600, Math.min(1400, Math.round(targetAngleDeg * 11)));
+            steps.push({
+                cmd: 'CMD:TURN_RIGHT',
+                pkt: 'R',
+                desc: `1단계: 목표 지점 방향으로 우회전 선회 (${targetAngleDeg}°)...`,
+                duration: turnTime,
+                heading: targetAngleDeg,
+                pctX: startPos.pctX,
+                pctY: startPos.pctY,
+                mmX: startPos.mmX,
+                mmY: startPos.mmY,
+                signal: '우회전 선회'
+            });
+        } else if (Math.abs(targetAngleDeg) > 150) {
+            // 후방 목표: 거리가 가벼우면 후진, 멀면 180도 선회
+            if (distMm <= 280) {
+                const backTime = Math.max(1200, Math.min(4500, Math.round(distMm * 8)));
+                steps.push({
+                    cmd: 'CMD:BACKWARD',
+                    pkt: 'B',
+                    desc: `1단계: 후방 목표 지점으로 후진 주행 (${distMm}mm)...`,
+                    duration: backTime,
+                    heading: this.currentHeading,
+                    pctX: pctX,
+                    pctY: pctY,
+                    mmX: x,
+                    mmY: y,
+                    signal: '후진 주행'
+                });
+            } else {
+                steps.push({
+                    cmd: 'CMD:TURN_RIGHT',
+                    pkt: 'R',
+                    desc: '1단계: 후방 목표를 향해 180° 반전 선회...',
+                    duration: 1700,
+                    heading: 180,
+                    pctX: startPos.pctX,
+                    pctY: startPos.pctY,
+                    mmX: startPos.mmX,
+                    mmY: startPos.mmY,
+                    signal: '180° 선회'
+                });
+            }
+        }
+
+        // 2. 직진 주행 단계 (후진으로 바로 도달한 경우가 아니면)
+        const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
+        if (!lastStep || lastStep.cmd !== 'CMD:BACKWARD') {
+            const forwardTime = Math.max(1200, Math.min(7000, Math.round(distMm * 7.5)));
+            const stepNum = steps.length + 1;
+            steps.push({
+                cmd: 'CMD:FORWARD',
+                pkt: 'F',
+                desc: `${stepNum}단계: 목표 지점으로 직진 주행 (${distMm}mm)...`,
+                duration: forwardTime,
+                heading: targetAngleDeg,
+                pctX: pctX,
+                pctY: pctY,
+                mmX: x,
+                mmY: y,
+                signal: '자율 주행'
+            });
+        }
+
+        // 3. 최종 안전 정지 단계
+        const finalNum = steps.length + 1;
+        steps.push({
+            cmd: 'CMD:STOP',
+            pkt: 'S',
+            desc: `${finalNum}단계: 🎯 목표 지점 도착 완료! 모터 안전 정지`,
+            duration: 0,
+            heading: targetAngleDeg,
+            pctX: pctX,
+            pctY: pctY,
+            mmX: x,
+            mmY: y,
+            signal: '도착 완료'
+        });
+
+        const totalDurationMs = steps.reduce((acc, s) => acc + s.duration, 0);
 
         // 동적 경로 계획 생성
         const customDest = {
@@ -5920,27 +6161,24 @@ const HackathonMatNavigator = {
             pctX: pctX,
             pctY: pctY,
             distMm: distMm,
-            timeSec: Math.round(durationMs / 1000),
-            voiceIntro: `목표 좌표 X ${x} 밀리미터, Y ${y} 밀리미터로 환산 완료했습니다. 로보독이 자율 주행을 시작합니다.`,
-            voiceArrival: `지정하신 목표 좌표에 안전하게 도착했습니다. 안내를 완료합니다.`,
+            timeSec: Math.round(totalDurationMs / 1000),
+            voiceIntro: `목표 지점으로 이동을 시작합니다. 직선 거리 ${distMm} 밀리미터입니다.`,
+            voiceArrival: `지정하신 목표 지점에 안전하게 도착했습니다. 모터를 정지합니다.`,
             routePoints: [
-                { pctX: this.currentPos.pctX, pctY: this.currentPos.pctY },
+                { pctX: startPos.pctX, pctY: startPos.pctY },
                 { pctX: pctX, pctY: pctY }
             ],
-            steps: [
-                { cmd: 'CMD:FORWARD', pkt: 'F', desc: `목표 좌표 (X: ${x}, Y: ${y}) 방면 주행 (${distMm}mm)`, duration: durationMs, pctX: pctX, pctY: pctY, mmX: x, mmY: y, signal: '자율 주행' },
-                { cmd: 'CMD:STOP', pkt: 'S', desc: `📍 목표 좌표 도착 완료! 모터 정지`, duration: 0, pctX: pctX, pctY: pctY, mmX: x, mmY: y, signal: '도착 완료' }
-            ]
+            steps: steps
         };
 
         this.destinations['CUSTOM'] = customDest;
 
-        logEvent('[MAT-NAV]', `🎯 [좌표 직접 환산] -> (${x}mm, ${y}mm), 직선거리: ${distMm}mm`, 'success');
+        logEvent('[MAT-NAV]', `🎯 [좌표 환산 완료] -> (${x}mm, ${y}mm), 거리: ${distMm}mm, 방향: ${targetAngleDeg}° (총 ${steps.length}단계)`, 'success');
 
         this.drawRouteLine(customDest.routePoints);
 
         const coordTgt = document.getElementById('coordTargetPos');
-        if (coordTgt) coordTgt.textContent = `X: ${x}mm, Y: ${y}mm (${label})`;
+        if (coordTgt) coordTgt.textContent = `X: ${x}mm, Y: ${y}mm (${distMm}mm)`;
 
         const hudDest = document.getElementById('realHudDestName');
         const hudDist = document.getElementById('realHudRemainDist');
@@ -5951,7 +6189,7 @@ const HackathonMatNavigator = {
 
         if (hudDest) hudDest.textContent = `${label} (${x}, ${y})`;
         if (hudDist) hudDist.textContent = `${distMm} mm`;
-        if (hudTime) hudTime.textContent = `약 ${Math.round(durationMs / 1000)}초`;
+        if (hudTime) hudTime.textContent = `약 ${Math.round(totalDurationMs / 1000)}초`;
         if (hudSignal) hudSignal.textContent = '좌표 추적 중';
         if (hudInst) hudInst.textContent = customDest.voiceIntro;
         if (autoBadge) {
@@ -5979,6 +6217,9 @@ const HackathonMatNavigator = {
         this.isPaused = false;
         AppState.isWalking = true;
         AppState.currentDest = dest.name;
+
+        // 목표 지점 핀 표시
+        this.showTargetMarker(dest.pctX, dest.pctY, dest.xMm, dest.yMm);
 
         logEvent('[MAT-NAV]', `🎯 [목적지 좌표 환산] "${query}" -> [${dest.name}] (X: ${dest.xMm}mm, Y: ${dest.yMm}mm)`, 'success');
 
@@ -6014,6 +6255,26 @@ const HackathonMatNavigator = {
         this.executeStep(destKey, 0);
     },
 
+    showTargetMarker(pctX, pctY, xMm, yMm) {
+        const marker = document.getElementById('matTargetMarker');
+        const label = document.getElementById('matTargetPinLabel');
+        if (marker) {
+            marker.style.left = `${pctX}%`;
+            marker.style.top = `${pctY}%`;
+            marker.style.display = 'flex';
+        }
+        if (label) {
+            label.textContent = `목표 (${xMm}, ${yMm})`;
+        }
+    },
+
+    clearTargetMarker() {
+        const marker = document.getElementById('matTargetMarker');
+        if (marker) {
+            marker.style.display = 'none';
+        }
+    },
+
     drawRouteLine(points) {
         const line = document.getElementById('matRouteLine');
         if (!line || !points || points.length === 0) return;
@@ -6026,11 +6287,30 @@ const HackathonMatNavigator = {
         if (line) line.setAttribute('points', '');
     },
 
-    updateRobotMarker(pctX, pctY) {
+    updateRobotMarker(pctX, pctY, headingDeg = null, transitionDurationMs = null) {
         const marker = document.getElementById('matRobotMarker');
+        const tooltip = document.getElementById('matRobotTooltip');
+
         if (marker) {
+            if (transitionDurationMs && transitionDurationMs > 0) {
+                marker.style.transition = `left ${transitionDurationMs / 1000}s linear, top ${transitionDurationMs / 1000}s linear, transform 0.4s ease`;
+            } else {
+                marker.style.transition = `left 0.4s ease, top 0.4s ease, transform 0.4s ease`;
+            }
             marker.style.left = `${pctX}%`;
             marker.style.top = `${pctY}%`;
+
+            if (headingDeg !== null && !isNaN(headingDeg)) {
+                this.currentHeading = headingDeg;
+                marker.style.transform = `translate(-50%, -50%) rotate(${headingDeg}deg)`;
+                if (tooltip) {
+                    tooltip.style.transform = `translateX(-50%) rotate(${-headingDeg}deg)`;
+                }
+            }
+        }
+
+        if (tooltip) {
+            tooltip.textContent = `현재 위치 (${Math.round(pctX * 10)}, ${Math.round(pctY * 7.5)})`;
         }
     },
 
@@ -6046,12 +6326,17 @@ const HackathonMatNavigator = {
         this.activeStepIdx = stepIdx;
         const step = dest.steps[stepIdx];
 
-        // 1. 모터 패킷 방출 (F, L, R, S)
+        // 1. 모터 패킷 방출 (F, B, L, R, S)
         BleController.sendPacket(step.cmd);
 
-        // 2. 로보독 마커 위치 및 좌표 갱신
-        this.currentPos = { mmX: step.mmX, mmY: step.mmY, pctX: step.pctX, pctY: step.pctY };
-        this.updateRobotMarker(step.pctX, step.pctY);
+        // 2. 로보독 마커 위치 및 좌표 갱신 (직진/후진 시에는 시간에 맞춰 부드럽게 이동)
+        if (step.cmd === 'CMD:FORWARD' || step.cmd === 'CMD:BACKWARD') {
+            this.updateRobotMarker(step.pctX, step.pctY, step.heading, step.duration);
+            this.currentPos = { mmX: step.mmX, mmY: step.mmY, pctX: step.pctX, pctY: step.pctY };
+        } else {
+            // 회전 시에는 제자리에서 헤딩만 회전
+            this.updateRobotMarker(this.currentPos.pctX, this.currentPos.pctY, step.heading, 400);
+        }
 
         const coordCur = document.getElementById('coordCurrentPos');
         const coordStep = document.getElementById('coordMotionStep');
@@ -6208,12 +6493,14 @@ const RealRobotAutoPilot = {
             btnBle.addEventListener('click', () => BleController.connect('microbit'));
         }
 
-        // 3. 수동 모터 패킷 즉시 전송 테스트 패드
+        // 3. 수동 모터 패킷 즉시 전송 테스트 패드 (전진, 후진, 좌회전, 우회전, 정지)
         const btnF = document.getElementById('btnRealTestF');
+        const btnB = document.getElementById('btnRealTestB');
         const btnS = document.getElementById('btnRealTestS');
         const btnL = document.getElementById('btnRealTestL');
         const btnR = document.getElementById('btnRealTestR');
         if (btnF) btnF.addEventListener('click', () => BleController.sendPacket('CMD:FORWARD'));
+        if (btnB) btnB.addEventListener('click', () => BleController.sendPacket('CMD:BACKWARD'));
         if (btnS) btnS.addEventListener('click', () => BleController.sendPacket('CMD:STOP'));
         if (btnL) btnL.addEventListener('click', () => BleController.sendPacket('CMD:TURN_LEFT'));
         if (btnR) btnR.addEventListener('click', () => BleController.sendPacket('CMD:TURN_RIGHT'));
@@ -6277,9 +6564,10 @@ const RealRobotAutoPilot = {
             });
         }
 
-        // 8. [신규] 좌표 직접 입력 및 출발선 리셋 버튼
+        // 8. 좌표 직접 입력 및 출발선 리셋, 비상 정지 버튼
         const btnApplyCoord = document.getElementById('btnApplyCustomCoord');
         const btnResetStart = document.getElementById('btnResetStartCoord');
+        const btnMatStop = document.getElementById('btnMatEmergencyStop');
         const inputCoordX = document.getElementById('inputCustomCoordX');
         const inputCoordY = document.getElementById('inputCustomCoordY');
 
@@ -6297,14 +6585,54 @@ const RealRobotAutoPilot = {
             });
         }
 
-        // 9. [신규] 경기장 매트 이미지 직접 클릭 시 해당 좌표로 즉시 자율주행
-        const matViewBox = document.getElementById('matViewBox');
-        if (matViewBox) {
-            matViewBox.addEventListener('click', (e) => {
-                // 핀 또는 로봇 마커 클릭 시 중복 처리 방지
-                if (e.target.closest('.mat-dest-pin') || e.target.closest('.mat-robot-marker')) return;
+        if (btnMatStop) {
+            btnMatStop.addEventListener('click', () => {
+                HackathonMatNavigator.stop();
+            });
+        }
 
-                const rect = matViewBox.getBoundingClientRect();
+        // 8-1. [신규] 로보독 현재 위치 수동 지정 모드 토글
+        const btnToggleSetPos = document.getElementById('btnToggleSetRobotPos');
+        const textToggleSetPos = document.getElementById('textToggleSetRobotPos');
+        const matModeBadge = document.getElementById('matModeStatusBadge');
+        const matBox = document.getElementById('matViewBox');
+
+        const updateSetPosUi = (active) => {
+            HackathonMatNavigator.isSetRobotPosMode = active;
+            if (active) {
+                if (btnToggleSetPos) {
+                    btnToggleSetPos.style.background = '#FEF3C7';
+                    btnToggleSetPos.style.borderColor = '#F59E0B';
+                    btnToggleSetPos.style.color = '#B45309';
+                }
+                if (textToggleSetPos) textToggleSetPos.textContent = '매트에서 실제 로봇 위치를 클릭하세요!';
+                if (matBox) matBox.classList.add('set-robot-mode');
+                if (matModeBadge) matModeBadge.innerHTML = '<span style="color:#D97706; font-weight:800;">📍 [위치 재설정 모드] 실제 로보독이 놓여있는 매트 위치를 마우스로 클릭하세요!</span>';
+            } else {
+                if (btnToggleSetPos) {
+                    btnToggleSetPos.style.background = '#EEF2FF';
+                    btnToggleSetPos.style.borderColor = '#C7D2FE';
+                    btnToggleSetPos.style.color = '#4F46E5';
+                }
+                if (textToggleSetPos) textToggleSetPos.textContent = '로보독 현재 위치 재설정';
+                if (matBox) matBox.classList.remove('set-robot-mode');
+                if (matModeBadge) matModeBadge.innerHTML = '<span>💡</span><span>매트 사진의 원하는 곳을 마우스로 클릭하면 로보독이 스스로 방향을 돌려 이동합니다!</span>';
+            }
+        };
+
+        if (btnToggleSetPos) {
+            btnToggleSetPos.addEventListener('click', () => {
+                updateSetPosUi(!HackathonMatNavigator.isSetRobotPosMode);
+            });
+        }
+
+        // 9. [신규] 경기장 매트 이미지 직접 클릭 시 (위치 재설정 모드 or Click-to-Move 자율주행)
+        if (matBox) {
+            matBox.addEventListener('click', (e) => {
+                // 거점 핀 클릭 시에는 중복 처리 방지
+                if (e.target.closest('.mat-dest-pin')) return;
+
+                const rect = matBox.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const clickY = e.clientY - rect.top;
 
@@ -6313,6 +6641,13 @@ const RealRobotAutoPilot = {
 
                 const xMm = Math.round(pctX * 10);
                 const yMm = Math.round(pctY * 7.5);
+
+                // [로보독 현재 위치 재설정 모드] 활성화 상태인 경우
+                if (HackathonMatNavigator.isSetRobotPosMode) {
+                    HackathonMatNavigator.setRobotPosition(xMm, yMm);
+                    updateSetPosUi(false);
+                    return;
+                }
 
                 if (inputCoordX) inputCoordX.value = xMm;
                 if (inputCoordY) inputCoordY.value = yMm;

@@ -2279,23 +2279,35 @@
 
                 <!-- 수동 모터 패킷 즉시 전송 테스트 패드 -->
                 <div class="real-motor-test-pad">
-                    <div class="motor-pad-title">⚡ 모터 다이렉트 테스트 (즉시 패킷 전송)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div class="motor-pad-title" style="margin-bottom: 0;">⚡ 모터 다이렉트 & 키보드 조종</div>
+                        <span class="badge badge-blue" style="font-size: 11px;">⌨️ 키보드 ↑↓←→ / Space 지원</span>
+                    </div>
                     <div class="motor-btn-cluster">
-                        <button id="btnRealTestF" class="btn-motor-cmd btn-f" type="button" title="전진 (F / 1)">
-                            <span>⬆️</span>
+                        <button id="btnRealTestF" class="btn-motor-cmd btn-f" type="button" title="전진 (F / 단축키: ↑ 또는 W)">
+                            <span style="font-size: 16px;">⬆️</span>
                             <span>전진(F)</span>
+                            <span class="key-hint">↑ / W</span>
                         </button>
-                        <button id="btnRealTestS" class="btn-motor-cmd btn-s" type="button" title="정지 (S / 0)">
-                            <span>🛑</span>
-                            <span>정지(S)</span>
+                        <button id="btnRealTestB" class="btn-motor-cmd btn-b" type="button" title="후진 (B / 단축키: ↓ 또는 S)">
+                            <span style="font-size: 16px;">⬇️</span>
+                            <span>후진(B)</span>
+                            <span class="key-hint">↓ / S</span>
                         </button>
-                        <button id="btnRealTestL" class="btn-motor-cmd btn-l" type="button" title="좌회전 (L / 3)">
-                            <span>↰</span>
+                        <button id="btnRealTestL" class="btn-motor-cmd btn-l" type="button" title="좌회전 (L / 단축키: ← 또는 A)">
+                            <span style="font-size: 16px;">↰</span>
                             <span>좌회전(L)</span>
+                            <span class="key-hint">← / A</span>
                         </button>
-                        <button id="btnRealTestR" class="btn-motor-cmd btn-r" type="button" title="우회전 (R / 4)">
-                            <span>↱</span>
+                        <button id="btnRealTestR" class="btn-motor-cmd btn-r" type="button" title="우회전 (R / 단축키: → 또는 D)">
+                            <span style="font-size: 16px;">↱</span>
                             <span>우회전(R)</span>
+                            <span class="key-hint">→ / D</span>
+                        </button>
+                        <button id="btnRealTestS" class="btn-motor-cmd btn-s" type="button" title="정지 (S / 단축키: Space 또는 Esc)">
+                            <span style="font-size: 16px;">🛑</span>
+                            <span>정지(S)</span>
+                            <span class="key-hint">Space</span>
                         </button>
                     </div>
                 </div>
@@ -2378,14 +2390,35 @@
             </div>
         </div>
 
-        <!-- 4. [신규] 🏆 해커톤 경기장 매트 (AI 동행 프로젝트) 및 실시간 좌표 관제 -->
+        <!-- 4. 🏆 해커톤 경기장 매트 실시간 위치 관제 & 클릭 이동 (Click-to-Move 자율주행) -->
         <div class="real-robot-card" style="padding: 16px;">
             <div class="real-card-header" style="margin-bottom: 12px;">
                 <div class="real-card-title">
                     <span>🏆</span>
-                    <span>해커톤 경기장 매트 (AI 동행 프로젝트 피지컬AI) & 실시간 좌표 관제</span>
+                    <span>경기장 매트 실시간 위치 관제 & 클릭 이동 (Click-to-Move 자율주행)</span>
                 </div>
-                <span class="badge badge-blue">실제 대회장 매트 1:1 동기화</span>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="badge badge-green">🎯 클릭 즉시 자율주행</span>
+                    <span class="badge badge-blue">실제 대회장 매트 1:1 동기화</span>
+                </div>
+            </div>
+
+            <!-- 상단 퀵 모드 액션 바 -->
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <button id="btnToggleSetRobotPos" type="button" class="btn-mat-action" style="background: #EEF2FF; color: #4F46E5; border: 1.5px solid #C7D2FE; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <span>📍</span><span id="textToggleSetRobotPos">로보독 현재 위치 재설정</span>
+                    </button>
+                    <button id="btnResetStartCoord" type="button" class="btn-mat-action" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                        <span>🚩</span><span>출발선(START) 리셋</span>
+                    </button>
+                    <button id="btnMatEmergencyStop" type="button" class="btn-mat-action" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                        <span>🛑</span><span>즉시 정지 (Space)</span>
+                    </button>
+                </div>
+                <div id="matModeStatusBadge" style="font-size: 12.5px; color: #475569; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                    <span>💡</span><span>매트 사진의 원하는 곳을 마우스로 클릭하면 로보독이 스스로 방향을 돌려 이동합니다!</span>
+                </div>
             </div>
 
             <!-- 매트 그래픽 & 실시간 위치 뷰어 -->
@@ -2429,9 +2462,20 @@
                     </div>
                 </div>
 
-                <!-- 실시간 로보독 마커 -->
+                <!-- 실시간 클릭 목표 지점 마커 (Target Pin) -->
+                <div id="matTargetMarker" class="mat-target-marker" style="display: none; left: 0; top: 0;">
+                    <div class="target-marker-pulse"></div>
+                    <div class="target-marker-pin">
+                        <span>🎯</span>
+                        <span id="matTargetPinLabel">목표 지점</span>
+                    </div>
+                </div>
+
+                <!-- 실시간 로보독 마커 (헤딩 방향 화살표 & 좌표 툴팁) -->
                 <div id="matRobotMarker" class="mat-robot-marker" style="left: 77%; top: 86%;">
+                    <span class="robot-heading-arrow" id="matRobotArrow">▲</span>
                     <span>🐕</span>
+                    <div class="robot-marker-tooltip" id="matRobotTooltip">현재 위치 (770, 645)</div>
                 </div>
             </div>
 
@@ -2439,11 +2483,11 @@
             <div class="mat-coord-panel">
                 <div class="coord-item">
                     <span class="coord-label">현재 로보독 좌표 (X, Y)</span>
-                    <span id="coordCurrentPos" class="coord-value">X: 770mm, Y: 645mm</span>
+                    <span id="coordCurrentPos" class="coord-value">X: 770mm, Y: 645mm (START)</span>
                 </div>
                 <div class="coord-item">
-                    <span class="coord-label">목표 거점 환산 좌표 (X, Y)</span>
-                    <span id="coordTargetPos" class="coord-value">미설정</span>
+                    <span class="coord-label">클릭 목표 환산 좌표 (X, Y)</span>
+                    <span id="coordTargetPos" class="coord-value">원하는 지점을 클릭하세요</span>
                 </div>
                 <div class="coord-item">
                     <span class="coord-label">모션 플래너 계획 단계</span>
@@ -2455,7 +2499,7 @@
                 </div>
             </div>
 
-            <!-- [신규] 🎯 수동 좌표 직접 입력 및 클릭 설정 안내 바 -->
+            <!-- 🎯 수동 좌표 직접 입력 및 키보드 조종 가이드 바 -->
             <div class="mat-manual-coord-box" style="margin-top: 14px; padding: 14px 16px; background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span style="font-weight: 800; font-size: 13px; color: #1E293B; display: flex; align-items: center; gap: 4px;">
@@ -2472,12 +2516,14 @@
                     <button id="btnApplyCustomCoord" type="button" style="background: #2563EB; color: #FFF; border: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
                         <span>🚀</span><span>이 좌표로 이동</span>
                     </button>
-                    <button id="btnResetStartCoord" type="button" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        <span>🚩</span><span>출발선 리셋</span>
-                    </button>
                 </div>
-                <div style="font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px;">
-                    <span>💡</span><span>매트 사진의 원하는 지점을 마우스로 직접 클릭해도 좌표가 즉시 설정됩니다!</span>
+                <div style="font-size: 12px; color: #475569; display: flex; align-items: center; gap: 8px; font-weight: 700;">
+                    <span style="color: #2563EB;">⌨️ 키보드 단축키:</span>
+                    <span>[↑/W 전진]</span>
+                    <span>[↓/S 후진]</span>
+                    <span>[←/A 좌회전]</span>
+                    <span>[→/D 우회전]</span>
+                    <span>[Space 정지]</span>
                 </div>
             </div>
         </div>
