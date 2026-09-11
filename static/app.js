@@ -87,11 +87,14 @@ function calculateDistanceM(lat1, lng1, lat2, lng2) {
 // ---------------------------------------------------------
 // 2. 실제 로보독 Web Bluetooth (BLE) UART 통신 제어기
 // ---------------------------------------------------------
-// Nordic UART Service, HM-10, ESP32, Unitree, AD-401, LEGO, micro:bit 표준 BLE 서비스 UUID 목록
+// Nordic UART Service (NUS), HM-10, ESP32, Unitree, AD-401, LEGO, micro:bit 표준 BLE 서비스 UUID 목록
+// ※ micro:bit 및 BLE 표준 규칙:
+// - NUS_TX (브라우저 -> 마이크로비트 쓰기 채널): 6e400003 (RX Characteristic on peripheral)
+// - NUS_RX (마이크로비트 -> 브라우저 수신 채널): 6e400002 (TX Characteristic on peripheral, Notify)
 const BLE_UUIDS = {
     NUS_SERVICE: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
-    NUS_TX: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
-    NUS_RX: '6e400003-b5a3-f393-e0a9-e50e24dcca9e',
+    NUS_TX: '6e400003-b5a3-f393-e0a9-e50e24dcca9e', // Central Writes to Peripheral RX
+    NUS_RX: '6e400002-b5a3-f393-e0a9-e50e24dcca9e', // Central Listens to Peripheral TX
     HM10_SERVICE: '0000ffe0-0000-1000-8000-00805f9b34fb',
     HM10_CHAR: '0000ffe1-0000-1000-8000-00805f9b34fb'
 };
@@ -457,11 +460,28 @@ const BleController = {
                 try {
                     const s = await server.getPrimaryService(p.s);
                     if (s) {
-                        AppState.bleTxChar = await s.getCharacteristic(p.tx).catch(() => null);
-                        AppState.bleRxChar = await s.getCharacteristic(p.rx).catch(() => null);
-                        if (AppState.bleTxChar) boundTx = true;
-                        if (AppState.bleRxChar) boundRx = true;
-                        this.logTerminal(`GATT [${p.name}] 통신 채널 바인딩 성공`, 'info');
+                        const chars = await s.getCharacteristics().catch(() => []);
+                        // 서비스 내부 특성 중 실제 write 가능한 특성을 TX로, notify 가능한 특성을 RX로 안전 바인딩
+                        for (const ch of chars) {
+                            if (!AppState.bleTxChar && (ch.properties.write || ch.properties.writeWithoutResponse)) {
+                                AppState.bleTxChar = ch;
+                                boundTx = true;
+                            }
+                            if (!AppState.bleRxChar && (ch.properties.notify || ch.properties.indicate)) {
+                                AppState.bleRxChar = ch;
+                                boundRx = true;
+                            }
+                        }
+                        // 만약 속성 플래그가 비어있는 모듈의 경우 지정된 UUID로 직접 폴백
+                        if (!AppState.bleTxChar) {
+                            AppState.bleTxChar = await s.getCharacteristic(p.tx).catch(() => null);
+                            if (AppState.bleTxChar) boundTx = true;
+                        }
+                        if (!AppState.bleRxChar) {
+                            AppState.bleRxChar = await s.getCharacteristic(p.rx).catch(() => null);
+                            if (AppState.bleRxChar) boundRx = true;
+                        }
+                        this.logTerminal(`GATT [${p.name}] 통신 채널 바인딩 성공 (TX:${AppState.bleTxChar ? AppState.bleTxChar.uuid.slice(0, 8) : 'none'})`, 'info');
                         break;
                     }
                 } catch (e) {}
