@@ -19,7 +19,7 @@
     {% endif %}
 
     <!-- Local CSS with cache-busting -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=39.0_hud_layout_fix">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=40.0_mobile_responsive_opt">
 
     <!-- [안심 보장] ☀️ 완벽한 화이트 모드 및 헤더 버튼 UI 완벽 최적화 스타일 (캐시 무관 즉시 적용) -->
     <style>
@@ -2156,6 +2156,317 @@
             color: #CBD5E1 !important;
         }
 
+        /* =========================================================
+           📱 [v40.0] 모바일 전용 고도화 반응형 & 터치 최적화 스타일
+           ========================================================= */
+        @media (max-width: 768px) {
+            html, body {
+                overflow-x: hidden !important;
+                width: 100% !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }
+
+            button, a, input, select {
+                touch-action: manipulation !important;
+            }
+
+            /* 1. 최상단 헤더 모바일 레이아웃 */
+            .app-header {
+                padding: 8px 12px !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+            }
+            .header-brand {
+                gap: 8px !important;
+            }
+            .brand-icon {
+                font-size: 20px !important;
+            }
+            .brand-title {
+                font-size: 15px !important;
+            }
+            .brand-sub {
+                display: none !important;
+            }
+            .mode-switcher-container {
+                order: 3 !important;
+                width: 100% !important;
+                justify-content: space-around !important;
+                margin-top: 4px !important;
+                padding: 2px !important;
+                overflow-x: auto !important;
+            }
+            .btn-mode {
+                flex: 1 !important;
+                height: 32px !important;
+                padding: 0 6px !important;
+                font-size: 12px !important;
+                text-align: center !important;
+                justify-content: center !important;
+            }
+            .header-right-group {
+                gap: 5px !important;
+            }
+            .app-header button {
+                height: 34px !important;
+                padding: 0 9px !important;
+                font-size: 12px !important;
+            }
+
+            /* 2. 실행 모드 탭 바 모바일 최적화 */
+            .op-mode-tab-bar {
+                position: relative !important;
+                top: 0 !important;
+                padding: 6px 10px !important;
+            }
+            .op-mode-tab-inner {
+                gap: 8px !important;
+            }
+            .op-mode-tab {
+                padding: 8px 10px !important;
+                font-size: 13px !important;
+                gap: 6px !important;
+                border-radius: 10px !important;
+            }
+            .tab-emoji {
+                font-size: 16px !important;
+            }
+            .tab-pill {
+                display: none !important;
+            }
+
+            /* 3. 실제 로보독 뷰 컨테이너 & 카드 */
+            .real-robot-view {
+                padding: 10px 8px !important;
+                gap: 12px !important;
+            }
+            .real-robot-grid-2col {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+            .real-robot-card {
+                padding: 14px 12px !important;
+                border-radius: 14px !important;
+            }
+            .real-card-header {
+                margin-bottom: 10px !important;
+                padding-bottom: 8px !important;
+            }
+            .real-card-title {
+                font-size: 15px !important;
+            }
+
+            /* 4. 하드웨어 연결 & 모터 테스트 패드 */
+            .real-hw-status-row {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+                margin-bottom: 10px !important;
+            }
+            .real-hw-badge {
+                font-size: 11px !important;
+                padding: 6px 8px !important;
+                justify-content: center !important;
+                text-align: center !important;
+            }
+            .real-btn-row {
+                flex-direction: column !important;
+                gap: 8px !important;
+                margin-bottom: 12px !important;
+            }
+            .btn-real-hw {
+                width: 100% !important;
+                min-width: unset !important;
+                padding: 11px !important;
+                font-size: 13px !important;
+                border-radius: 10px !important;
+            }
+            .real-motor-test-pad {
+                padding: 10px !important;
+            }
+            .motor-btn-cluster {
+                grid-template-columns: repeat(5, 1fr) !important;
+                gap: 4px !important;
+            }
+            .btn-motor-cmd {
+                padding: 8px 2px !important;
+                font-size: 11px !important;
+                border-radius: 8px !important;
+                min-height: 46px !important;
+            }
+            .btn-motor-cmd .key-hint {
+                display: none !important;
+            }
+
+            /* 5. 음성 검색 카드 */
+            .real-voice-box {
+                padding: 6px 0 10px 0 !important;
+            }
+            .real-mic-btn {
+                width: 70px !important;
+                height: 70px !important;
+                font-size: 28px !important;
+                margin-bottom: 8px !important;
+            }
+            .real-voice-prompt {
+                font-size: 15px !important;
+            }
+            .real-voice-sub {
+                font-size: 12px !important;
+                margin-bottom: 8px !important;
+            }
+            .real-voice-transcript {
+                padding: 8px 12px !important;
+                font-size: 12px !important;
+                min-height: 38px !important;
+                margin-bottom: 10px !important;
+            }
+            .real-dest-chips {
+                gap: 6px !important;
+                margin-bottom: 10px !important;
+            }
+            .real-dest-chip {
+                padding: 6px 10px !important;
+                font-size: 11.5px !important;
+            }
+            .real-search-input-row {
+                gap: 6px !important;
+            }
+            .real-search-input {
+                padding: 9px 12px !important;
+                font-size: 13px !important;
+            }
+
+            /* 6. 자율주행 HUD 카드 */
+            .real-hud-card {
+                padding: 14px 12px !important;
+            }
+            .real-hud-top-row {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+                margin-bottom: 10px !important;
+            }
+            .live-motor-badge {
+                padding: 6px 12px !important;
+                font-size: 13px !important;
+            }
+            .real-hud-actions {
+                width: 100% !important;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr 1fr !important;
+                gap: 6px !important;
+                margin-top: 8px !important;
+            }
+            .btn-hud-action {
+                padding: 9px 4px !important;
+                font-size: 12px !important;
+                justify-content: center !important;
+                text-align: center !important;
+                border-radius: 8px !important;
+            }
+            .real-hud-instruction {
+                font-size: 16px !important;
+                gap: 6px !important;
+            }
+            .real-hud-subinfo {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px 12px !important;
+                font-size: 12px !important;
+            }
+
+            /* 7. 경기장 매트 & 조종 패널 */
+            .mat-view-box {
+                border-radius: 12px !important;
+                touch-action: manipulation !important;
+                -webkit-touch-callout: none !important;
+            }
+            .pin-bubble {
+                padding: 3px 6px !important;
+                font-size: 10px !important;
+                border-radius: 12px !important;
+                gap: 2px !important;
+            }
+            .pin-icon {
+                font-size: 11px !important;
+            }
+            .mat-robot-marker {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 17px !important;
+            }
+            .robot-heading-arrow {
+                top: -11px !important;
+                font-size: 10px !important;
+            }
+            .robot-marker-tooltip {
+                bottom: -18px !important;
+                font-size: 9px !important;
+                padding: 1px 5px !important;
+            }
+            .mat-coord-panel {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                padding: 10px 12px !important;
+            }
+            .coord-label {
+                font-size: 11px !important;
+            }
+            .coord-value {
+                font-size: 13px !important;
+            }
+            .mat-manual-coord-box {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+                padding: 10px 12px !important;
+            }
+            .mat-manual-coord-box > div:first-child {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+            .mat-manual-coord-box label {
+                justify-content: space-between !important;
+            }
+            .mat-manual-coord-box button {
+                grid-column: span 1 !important;
+                justify-content: center !important;
+                padding: 8px 10px !important;
+            }
+
+            /* 8. 모달 창 모바일 최적화 */
+            .modal-overlay .modal-card,
+            .modal-dialog,
+            .auth-card,
+            .setting-card {
+                width: 94vw !important;
+                max-width: 400px !important;
+                padding: 16px !important;
+                max-height: 88vh !important;
+                overflow-y: auto !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-right-group .faceid-text,
+            .header-right-group .setting-text {
+                display: none !important;
+            }
+            .btn-auth-header {
+                padding: 0 8px !important;
+                max-width: 90px !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .mat-manual-coord-box > div:first-child {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .mat-manual-coord-box button {
+                grid-column: span 2 !important;
+            }
+        }
     </style>
 
 </head>
