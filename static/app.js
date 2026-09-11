@@ -803,7 +803,33 @@ const BleController = {
             singlePkt = 'S\n';
         }
 
-        // [실제 로보독 뷰 HUD 인디케이터 동기화]
+        // ⚡ [0ms 즉시 무선 송출 - 초고속 반응] UI 렌더링이나 네트워크 fetch 대기 없이 즉시 패킷 전송
+        if (AppState.bleTxChar) {
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(singlePkt);
+                if (AppState.bleTxChar.properties && AppState.bleTxChar.properties.writeWithoutResponse) {
+                    AppState.bleTxChar.writeValueWithoutResponse(data).catch(() => {});
+                } else {
+                    AppState.bleTxChar.writeValue(data).catch(() => {});
+                }
+            } catch (bleErr) {
+                console.warn('BLE 송신 에러:', bleErr);
+            }
+        }
+
+        // [유선/동글] 시리얼 포트 즉시 송신
+        if (AppState.isUsbConnected && AppState.serialPort && AppState.serialPort.writable) {
+            try {
+                const encoder = new TextEncoder();
+                const writer = AppState.serialPort.writable.getWriter();
+                writer.write(encoder.encode(singlePkt)).then(() => writer.releaseLock()).catch(() => {});
+            } catch (usbErr) {
+                console.warn('USB 시리얼 송신 오류:', usbErr);
+            }
+        }
+
+        // [실제 로보독 뷰 HUD 인디케이터 동기화 (비동기 병렬)]
         try {
             const txIndicator = document.getElementById('realPacketTxIndicator');
             if (txIndicator) {
@@ -840,19 +866,7 @@ const BleController = {
         this.logTerminal(`[TX 송신] >> ${command} (${singlePkt.trim()})`, 'tx');
         logEvent('[BLE]', `[TX 송신] >> ${command} (${singlePkt.trim()})`, 'info');
 
-        // 1. [유선/동글] 노트북 USB 시리얼 포트로 직접 패킷 전송 (단일 패킷으로 micro:bit 버퍼 오버플로우 방지)
-        if (AppState.isUsbConnected && AppState.serialPort && AppState.serialPort.writable) {
-            try {
-                const encoder = new TextEncoder();
-                const writer = AppState.serialPort.writable.getWriter();
-                await writer.write(encoder.encode(singlePkt));
-                writer.releaseLock();
-            } catch (usbErr) {
-                console.warn('USB 시리얼 송신 오류:', usbErr);
-            }
-        }
-
-        // 백엔드 중계 API 비동기 알림
+        // 백엔드 중계 API 비동기 알림 (UI 블로킹 없음)
         fetch('/api/robodog/ble/command', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -861,23 +875,6 @@ const BleController = {
 
         if (AppState.isMockBle || (!AppState.bleTxChar && !AppState.isUsbConnected)) {
             this.mockResponse(command);
-            return;
-        }
-
-        if (AppState.bleTxChar) {
-            try {
-                const encoder = new TextEncoder();
-                const data = encoder.encode(singlePkt);
-                if (AppState.bleTxChar.properties.writeWithoutResponse) {
-                    await AppState.bleTxChar.writeValueWithoutResponse(data);
-                } else {
-                    await AppState.bleTxChar.writeValue(data);
-                }
-            } catch (err) {
-                this.logTerminal(`BLE 패킷 전송 오류: ${err.message}`, 'err');
-                logEvent('[ERROR]', `BLE 패킷 전송 실패: ${err.message}`, 'error');
-                this.mockResponse(command);
-            }
         }
     },
 
@@ -6691,9 +6688,19 @@ const RealRobotAutoPilot = {
                     interim += e.results[i][0].transcript;
                 }
             }
+            const currentSpoken = (final || interim).trim();
             if (transcriptEl) {
-                transcriptEl.textContent = final || interim || '음성 인식 중...';
+                transcriptEl.textContent = currentSpoken || '음성 인식 중...';
             }
+
+            // ⚡ [0.05초 초고속 음성 반응] 크롬 묵음 대기(2~3초) 없이 키워드 감지 즉시 주행 발동!
+            const fastKeyword = this.detectFastKeyword(currentSpoken);
+            if (fastKeyword) {
+                try { recognition.stop(); } catch (err) {}
+                this.handleVoiceCommand(fastKeyword);
+                return;
+            }
+
             if (final) {
                 this.handleVoiceCommand(final.trim());
             }
@@ -6728,8 +6735,29 @@ const RealRobotAutoPilot = {
         });
     },
 
+    detectFastKeyword(text) {
+        if (!text) return null;
+        const q = text.toLowerCase();
+        if (q.includes('병원') || q.includes('약국') || q.includes('치료') || q.includes('의원')) return '병원';
+        if (q.includes('역') || q.includes('지하철') || q.includes('전철')) return '지하철역';
+        if (q.includes('물류') || q.includes('택배') || q.includes('창고') || q.includes('배송')) return '물류센터';
+        if (q.includes('집') || q.includes('아파트') || q.includes('단지') || q.includes('홈') || q.includes('스마트')) return '스마트아파트';
+        if (q.includes('출발') || q.includes('시작') || q.includes('리셋') || q.includes('start')) return 'START';
+        if (q.includes('멈춰') || q.includes('정지') || q.includes('스톱') || q.includes('stop')) return 'STOP';
+        return null;
+    },
+
     handleVoiceCommand(text) {
         let cleaned = text.trim();
+        if (cleaned === 'STOP' || cleaned.includes('멈춰') || cleaned.includes('정지') || cleaned.includes('스톱')) {
+            HackathonMatNavigator.stop();
+            BleController.sendPacket('CMD:STOP');
+            const transcriptEl = document.getElementById('realVoiceTranscript');
+            if (transcriptEl) transcriptEl.innerHTML = `<strong>🛑 [비상 정지]</strong> 음성 명령으로 로보독 정지 완료!`;
+            VoiceEngine.speak('로보독을 정지했습니다.');
+            return;
+        }
+
         cleaned = cleaned.replace(/(으로|로)?\s*(안내해줘|가자|가줘|데려다줘|출발|알려줘|어디야|어디있어|가고싶어|경로|길안내)$/g, '').trim();
         cleaned = cleaned.replace(/^로보독\s*/g, '').trim();
 
@@ -6740,7 +6768,7 @@ const RealRobotAutoPilot = {
 
         const transcriptEl = document.getElementById('realVoiceTranscript');
         if (transcriptEl) {
-            transcriptEl.innerHTML = `<strong>🗣️ [인식 완료]</strong> "${cleaned}" 매트 좌표 탐색 시작...`;
+            transcriptEl.innerHTML = `<strong>⚡ [초고속 인식]</strong> "${cleaned}" 즉각 주행 시작!`;
         }
 
         HackathonMatNavigator.navigate(cleaned);
