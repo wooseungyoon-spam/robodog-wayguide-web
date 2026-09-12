@@ -767,7 +767,7 @@ const BleController = {
         } else if (!connected) {
             if (dongleBadge) {
                 dongleBadge.classList.remove('connected');
-                dongleText.textContent = 'USB 동글 / COM 포트 미연결';
+                dongleText.textContent = 'USB 동글 미연결';
             }
         }
 
@@ -2553,7 +2553,7 @@ const AuthManager = {
         localStorage.removeItem('robodog_current_user');
 
         const headerText = document.getElementById('headerAuthText');
-        if (headerText) headerText.textContent = 'guest님 (로그인)';
+        if (headerText) headerText.textContent = 'guest님';
 
         const btnLogout = document.getElementById('btnHeaderLogout');
         if (btnLogout) btnLogout.style.display = 'none';
