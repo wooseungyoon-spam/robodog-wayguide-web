@@ -2515,7 +2515,13 @@ const AuthManager = {
         const btnBlindEl = document.getElementById('btnBlindMode');
         if (btnBlindEl) btnBlindEl.style.setProperty('display', 'inline-flex', 'important');
         const switcherContainerEl = document.getElementById('modeSwitcherContainer');
-        if (switcherContainerEl) switcherContainerEl.style.setProperty('display', 'inline-flex', 'important');
+        if (switcherContainerEl) {
+            if (AppState.opMode === 'real') {
+                switcherContainerEl.style.setProperty('display', 'none', 'important');
+            } else {
+                switcherContainerEl.style.setProperty('display', 'inline-flex', 'important');
+            }
+        }
 
         if (!isEligible) {
             if (!AppState.isBlindMode) {
@@ -2862,7 +2868,13 @@ const AuthManager = {
         const container = document.getElementById('modeSwitcherContainer');
         if (!container) return;
 
-        // 일반 모드와 노인 모드 상단에 3대 모드 스위처(일반/노인/시각장애인) 상시 완전 노출
+        // 실전 로보독 모드에서는 노인 모드 및 시각장애인 모드를 완전히 제거하고 숨김
+        if (AppState.opMode === 'real') {
+            container.style.setProperty('display', 'none', 'important');
+            return;
+        }
+
+        // 가상 시뮬레이터 모드 상단에 3대 모드 스위처(일반/노인/시각장애인) 노출
         container.style.setProperty('display', 'inline-flex', 'important');
         if (btnGeneral) btnGeneral.style.setProperty('display', 'inline-flex', 'important');
         if (btnSenior) btnSenior.style.setProperty('display', 'inline-flex', 'important');
@@ -5800,6 +5812,7 @@ function switchOpMode(mode) {
     const tabSim = document.getElementById('tabOpVirtualSim');
     const realSec = document.getElementById('realRobotSection');
     const simSec = document.getElementById('virtualSimulatorSection');
+    const modeSwitcher = document.getElementById('modeSwitcherContainer');
 
     if (mode === 'real') {
         if (tabReal) tabReal.classList.add('active');
@@ -5807,12 +5820,18 @@ function switchOpMode(mode) {
         if (realSec) realSec.style.display = 'flex';
         if (simSec) simSec.style.display = 'none';
 
+        // 🐕 실전 로보독 모드: 노인 모드 및 시각장애인 모드 스위처 완전 제거/숨김
+        if (modeSwitcher) modeSwitcher.style.setProperty('display', 'none', 'important');
+
         logEvent('[OP-MODE]', '🐕 [실제 로보독 모드] 활성화: 해커톤 경기장 매트 좌표 자율주행 및 실시간 모터 관제 가동', 'success');
     } else {
         if (tabReal) tabReal.classList.remove('active');
         if (tabSim) tabSim.classList.add('active');
         if (realSec) realSec.style.display = 'none';
         if (simSec) simSec.style.display = 'block';
+
+        // 🖥️ 가상 시뮬레이터 모드: 디지털 트윈 3대 모드(일반/노인/시각장애인) 스위처 복원
+        if (modeSwitcher) modeSwitcher.style.setProperty('display', 'inline-flex', 'important');
 
         logEvent('[OP-MODE]', '🖥️ [가상 시뮬레이터 모드] 활성화: 세종대 실 도로 지도 & 디지털 트윈 가상 주행 모드 전환', 'info');
     }
